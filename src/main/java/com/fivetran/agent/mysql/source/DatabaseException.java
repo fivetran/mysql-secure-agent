@@ -1,3 +1,6 @@
+/**
+* Copyright (c) Fivetran 2018
+**/
 package com.fivetran.agent.mysql.source;
 
 public class DatabaseException extends RuntimeException {

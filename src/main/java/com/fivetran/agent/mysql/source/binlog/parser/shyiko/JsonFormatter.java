@@ -1,3 +1,6 @@
+/**
+* Copyright (c) Fivetran 2018
+**/
 /*
  * Copyright 2016 Stanley Shyiko
  *

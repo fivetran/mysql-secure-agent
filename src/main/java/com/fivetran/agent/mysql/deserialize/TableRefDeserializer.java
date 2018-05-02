@@ -1,3 +1,6 @@
+/**
+* Copyright (c) Fivetran 2018
+**/
 package com.fivetran.agent.mysql.deserialize;
 
 import com.fasterxml.jackson.databind.DeserializationContext;

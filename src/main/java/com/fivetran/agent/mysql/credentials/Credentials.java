@@ -1,3 +1,6 @@
+/**
+* Copyright (c) Fivetran 2018
+**/
 package com.fivetran.agent.mysql.credentials;
 
 import com.fivetran.agent.mysql.config.DatabaseCredentials;

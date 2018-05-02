@@ -1,3 +1,6 @@
+/**
+* Copyright (c) Fivetran 2018
+**/
 package com.fivetran.agent.mysql.output;
 
 import com.amazonaws.services.s3.AmazonS3Client;

@@ -1,3 +1,6 @@
+/**
+* Copyright (c) Fivetran 2018
+**/
 package com.fivetran.agent.mysql.binlog_test_generator;
 
 import java.io.ByteArrayOutputStream;
