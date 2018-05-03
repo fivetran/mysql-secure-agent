@@ -176,7 +176,7 @@ public class Updater {
                         case DELETE:
                             emitFromDelete(sourceEvent);
                             break;
-                        default:
+                        case TIMEOUT:
                             throw new RuntimeException("Unexpected switch case for source event type " + sourceEvent.event);
                     }
                 }
