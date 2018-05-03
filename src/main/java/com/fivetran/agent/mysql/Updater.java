@@ -34,7 +34,7 @@ public class Updater {
     private final AgentState state;
     private Map<TableRef, TableDefinition> tablesToSync;
 
-    Updater(Config config, MysqlApi mysql, Output out, Log log, AgentState state) {
+    public Updater(Config config, MysqlApi mysql, Output out, Log log, AgentState state) {
         this.config = config;
         this.mysql = mysql;
         this.out = out;
@@ -176,6 +176,8 @@ public class Updater {
                         case DELETE:
                             emitFromDelete(sourceEvent);
                             break;
+                        default:
+                            throw new RuntimeException("Unexpected switch case for source event type " + sourceEvent.event);
                     }
                 }
                 state.binlogPosition = sourceEvent.binlogPosition;
