@@ -157,6 +157,9 @@ public class Updater {
             while (true) {
                 SourceEvent sourceEvent = eventReader.readEvent();
 
+                if (target != null && sourceEvent.binlogPosition.equals(target))
+                    return;
+
                 if (sourceEvent.event == SourceEventType.TIMEOUT && state.tables.values().stream().anyMatch(tableState -> !tableState.finishedImport)) {
                     return;
                 }
@@ -166,9 +169,6 @@ public class Updater {
                 }
                 if (sourceEvent.event == SourceEventType.TIMEOUT) {
                     out.emitEvent(Event.createNop(), state);
-
-                    if (target != null && sourceEvent.binlogPosition.equals(target))
-                        return;
                 }
                 if (sourceEvent.event != SourceEventType.TIMEOUT) {
                     // todo manage when we emit tableDefinition events so that there is always a relevant table definition before an event in a file
