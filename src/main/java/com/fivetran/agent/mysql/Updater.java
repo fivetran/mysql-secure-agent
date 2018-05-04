@@ -31,8 +31,8 @@ public class Updater {
     private final MysqlApi mysql;
     private final Output out;
     private final Log log;
-    private final AgentState state;
-    private Map<TableRef, TableDefinition> tablesToSync;
+    protected final AgentState state;
+    Map<TableRef, TableDefinition> tablesToSync;
 
     public Updater(Config config, MysqlApi mysql, Output out, Log log, AgentState state) {
         this.config = config;
@@ -56,10 +56,10 @@ public class Updater {
     void sync() throws Exception {
         TableRef tableToImport = findTableToImport();
         syncPageFromTable(tablesToSync.get(tableToImport));
-        syncFromBinlog(Optional.empty());
+        syncFromBinlog();
     }
 
-    private TableRef findTableToImport() {
+    TableRef findTableToImport() {
         for (TableRef tableRef : state.tables.keySet()) {
             if (!state.tables.get(tableRef).finishedImport)
                 return tableRef;
@@ -145,7 +145,12 @@ public class Updater {
         return cursors;
     }
 
-    private void syncFromBinlog(Optional<BinlogPosition> target) throws Exception {
+
+    private void syncFromBinlog() throws Exception {
+        syncFromBinlog(null);
+    }
+
+    void syncFromBinlog(BinlogPosition target) throws Exception {
         BinlogPosition startingPosition = state.binlogPosition;
 
         try (EventReader eventReader = mysql.readSourceLog.events(startingPosition)) {
@@ -162,7 +167,7 @@ public class Updater {
                 if (sourceEvent.event == SourceEventType.TIMEOUT) {
                     out.emitEvent(Event.createNop(), state);
 
-                    if (target.isPresent() && sourceEvent.binlogPosition.equals(target.get()))
+                    if (target != null && sourceEvent.binlogPosition.equals(target))
                         return;
                 }
                 if (sourceEvent.event != SourceEventType.TIMEOUT) {
@@ -219,7 +224,7 @@ public class Updater {
         }
     }
 
-    private void updateTableDefinitions() {
+    void updateTableDefinitions() {
         Map<TableRef, TableDefinition> allSourceTables = mysql.tableDefinitions.get();
 
         tablesToSync = config.getTablesToSync(allSourceTables);
