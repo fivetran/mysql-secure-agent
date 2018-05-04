@@ -24,4 +24,6 @@ public interface Query {
      * Run a query and return only first row
      */
     Record record(String query);
+
+    BinlogPosition target();
 }

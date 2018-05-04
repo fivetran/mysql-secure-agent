@@ -92,6 +92,11 @@ public class ImportSourceTableSpec {
             throw new RuntimeException("ImportSourceTable has no business using singleRow method");
         }
 
+        @Override
+        public BinlogPosition target() {
+            return null;
+        }
+
         final Rows dummyRows = new Rows() {
             @Override
             public List<String> columnNames() {

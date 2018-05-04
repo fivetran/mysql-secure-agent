@@ -99,4 +99,23 @@ public class QueryDatabase implements Query {
         if (records.size() != 1) throw new RuntimeException("Query returned more than one row");
         return records.get(0);
     }
+
+    @Override
+    public BinlogPosition target() {
+        try (Statement statement = connect().createStatement();
+             ResultSet results = statement.executeQuery("SHOW MASTER STATUS")) {
+
+            if (!results.next())
+                throw new RuntimeException(
+                        "Empty result while trying to get executed log position");
+            String file = results.getString("File");
+            String positionString = results.getString("Position");
+            Long position = new Long(positionString);
+
+            return new BinlogPosition(file, position);
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not get executed log position", e);
+        }
+    }
 }

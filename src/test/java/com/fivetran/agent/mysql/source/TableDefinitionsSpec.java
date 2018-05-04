@@ -43,6 +43,11 @@ public class TableDefinitionsSpec {
             public Record record(String query) {
                 return null;
             }
+
+            @Override
+            public BinlogPosition target() {
+                return null;
+            }
         };
 
         TableDefinitions tableDefinitions = new TableDefinitions(query);
@@ -87,6 +92,11 @@ public class TableDefinitionsSpec {
 
             @Override
             public Record record(String query) {
+                return null;
+            }
+
+            @Override
+            public BinlogPosition target() {
                 return null;
             }
         };
