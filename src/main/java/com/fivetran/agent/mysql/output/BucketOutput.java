@@ -125,7 +125,7 @@ public class BucketOutput implements Output {
     }
 
     private void flushToBucket(AgentState state) throws IOException {
-        client.copy("", path.toFile());
+        client.copy("data", path.toFile());
         fileChannel.close();
         refreshFileChannel();
 
