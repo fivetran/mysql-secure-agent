@@ -56,7 +56,7 @@ public class Updater {
     void sync() throws Exception {
         TableRef tableToImport = findTableToImport();
         syncPageFromTable(tablesToSync.get(tableToImport));
-        syncFromBinlog();
+        syncFromBinlog(Optional.empty());
     }
 
     private TableRef findTableToImport() {
@@ -145,7 +145,7 @@ public class Updater {
         return cursors;
     }
 
-    private void syncFromBinlog() throws Exception {
+    private void syncFromBinlog(Optional<BinlogPosition> target) throws Exception {
         BinlogPosition startingPosition = state.binlogPosition;
 
         try (EventReader eventReader = mysql.readSourceLog.events(startingPosition)) {
@@ -161,6 +161,9 @@ public class Updater {
                 }
                 if (sourceEvent.event == SourceEventType.TIMEOUT) {
                     out.emitEvent(Event.createNop(), state);
+
+                    if (target.isPresent() && sourceEvent.binlogPosition.equals(target.get()))
+                        return;
                 }
                 if (sourceEvent.event != SourceEventType.TIMEOUT) {
                     // todo manage when we emit tableDefinition events so that there is always a relevant table definition before an event in a file
@@ -176,7 +179,7 @@ public class Updater {
                         case DELETE:
                             emitFromDelete(sourceEvent);
                             break;
-                        case TIMEOUT:
+                        default:
                             throw new RuntimeException("Unexpected switch case for source event type " + sourceEvent.event);
                     }
                 }
