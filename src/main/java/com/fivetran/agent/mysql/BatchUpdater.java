@@ -45,6 +45,6 @@ public class BatchUpdater extends Updater {
 
     private boolean done() {
         return state.tables.values().stream().allMatch(tableState -> tableState.finishedImport)
-                && state.binlogPosition.equals(target);
+                && state.binlogPosition.equals(target.get());
     }
 }
