@@ -5,10 +5,12 @@ import com.fivetran.agent.mysql.source.BinlogPosition;
 import com.fivetran.agent.mysql.source.TableRef;
 import com.fivetran.agent.mysql.state.AgentState;
 
-public class BatchUpdater extends Updater {
-    private final BinlogPosition target;
+import java.util.function.Supplier;
 
-    public BatchUpdater(Config config, MysqlApi mysql, Output out, Log log, AgentState state, BinlogPosition target) {
+public class BatchUpdater extends Updater {
+    private final Supplier<BinlogPosition> target;
+
+    public BatchUpdater(Config config, MysqlApi mysql, Output out, Log log, AgentState state, Supplier<BinlogPosition> target) {
         super(config, mysql, out, log, state);
         this.target = target;
     }
@@ -26,7 +28,7 @@ public class BatchUpdater extends Updater {
     void sync() throws Exception {
         TableRef tableToImport = findTableToImport();
         syncPageFromTable(tablesToSync.get(tableToImport));
-        syncFromBinlog(target);
+        syncFromBinlog(target.get());
     }
 
     private boolean done() {
