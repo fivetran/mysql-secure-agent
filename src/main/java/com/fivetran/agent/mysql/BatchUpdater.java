@@ -27,8 +27,20 @@ public class BatchUpdater extends Updater {
     @Override
     void sync() throws Exception {
         TableRef tableToImport = findTableToImport();
+        if (tableToImport == null)
+            return;
+
         syncPageFromTable(tablesToSync.get(tableToImport));
         syncFromBinlog(target.get());
+    }
+
+    @Override
+    TableRef findTableToImport() {
+        for (TableRef tableRef : state.tables.keySet()) {
+            if (!state.tables.get(tableRef).finishedImport)
+                return tableRef;
+        }
+        return null;
     }
 
     private boolean done() {
