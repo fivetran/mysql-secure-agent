@@ -130,7 +130,7 @@ public class BucketOutput implements Output {
         refreshFileChannel();
 
         String stateJson = Serialize.state(state);
-        Path statePath = Paths.get("state" + Instant.now().getEpochSecond() + ".json");
+        Path statePath = Paths.get("mysql_state.json");
         FileChannel stateFileChannel = FileChannel.open(statePath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
         stateFileChannel.write(ByteBuffer.wrap(stateJson.getBytes()));
         client.copy("resources", statePath.toFile());
@@ -138,7 +138,7 @@ public class BucketOutput implements Output {
     }
 
     private void refreshFileChannel() {
-        path = Paths.get(Instant.now().getEpochSecond() + ".json");
+        path = Paths.get("mysql_data_" + Instant.now().getEpochSecond() + ".json");
         try {
             fileChannel = FileChannel.open(path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
         } catch (IOException e) {

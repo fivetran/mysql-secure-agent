@@ -25,5 +25,8 @@ public interface Query {
      */
     Record record(String query);
 
+    /**
+     * Retrieve the latest position in the binary log
+     */
     BinlogPosition target();
 }
