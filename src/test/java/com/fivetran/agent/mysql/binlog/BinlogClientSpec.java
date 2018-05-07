@@ -54,11 +54,9 @@ public class BinlogClientSpec {
 
         assertThat(events.size(), equalTo(1));
         assertThat(events.pop(), equalTo(
-                new SourceEvent(
+                SourceEvent.createInsert(
                         new TableRef("schema", "table"),
                         new BinlogPosition("binlog-file", 26442),
-                        SourceEventType.INSERT,
-                        null,
                         ImmutableList.of(new Row("2147483647"))
                 )));
     }

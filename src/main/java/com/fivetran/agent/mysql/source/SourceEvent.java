@@ -12,16 +12,24 @@ public class SourceEvent {
     public final List<Row> oldRows;
     public final List<Row> newRows;
 
-    public SourceEvent(TableRef tableRef, BinlogPosition binlogPosition, SourceEventType event, List<Row> oldRow, List<Row> newRow) {
+    private SourceEvent(TableRef tableRef, BinlogPosition binlogPosition, SourceEventType event, List<Row> oldRows, List<Row> newRows) {
         this.tableRef = tableRef;
         this.binlogPosition = binlogPosition;
         this.event = event;
-        this.oldRows = oldRow;
-        this.newRows = newRow;
+        this.oldRows = oldRows;
+        this.newRows = newRows;
     }
 
-    public SourceEvent(TableRef tableRef, BinlogPosition binlogPosition, SourceEventType event, List<Row> newRow) {
-        this(tableRef, binlogPosition, event, null, newRow);
+    public static SourceEvent createInsert(TableRef tableRef, BinlogPosition latestPosition, List<Row> newRows) {
+        return new SourceEvent(tableRef, latestPosition, SourceEventType.INSERT, null, newRows);
+    }
+
+    public static SourceEvent createDelete(TableRef tableRef, BinlogPosition latestPosition, List<Row> newRows) {
+        return new SourceEvent(tableRef, latestPosition, SourceEventType.DELETE, null, newRows);
+    }
+
+    public static SourceEvent createUpdate(TableRef tableRef, BinlogPosition latestPosition, List<Row> oldRows, List<Row> newRows) {
+        return new SourceEvent(tableRef, latestPosition, SourceEventType.UPDATE, oldRows, newRows);
     }
 
     public static SourceEvent createTimeout(BinlogPosition latestPosition) {

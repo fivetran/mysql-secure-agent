@@ -63,7 +63,7 @@ public class UpdaterSpec {
             return new EventReader() {
                 @Override
                 public SourceEvent readEvent() {
-                    return null;
+                    return SourceEvent.createTimeout(position);
                 }
 
                 @Override
@@ -112,7 +112,8 @@ public class UpdaterSpec {
         TableDefinition ignoredTableDef = new TableDefinition(ignoredTable, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
         tableDefinitions.put(ignoredTable, ignoredTableDef);
 
-        updater.update();
+        updater.updateTableDefinitions();
+        updater.sync();  // TODO fix this
 
         assertEquals(outEvents.size(), 3);
         assertThat(outEvents, not(contains(Emit.row(Event.createUpsert(ignoredTable, row1)))));
@@ -140,8 +141,8 @@ public class UpdaterSpec {
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row2)));
         assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
 
-        SourceEvent event1 = new SourceEvent(tableRef, new BinlogPosition("file1", 0), INSERT, ImmutableList.of(row3));
-        SourceEvent event2 = new SourceEvent(tableRef, new BinlogPosition("file1", 1), INSERT, ImmutableList.of(row4));
+        SourceEvent event1 = SourceEvent.createInsert(tableRef, new BinlogPosition("file1", 0), ImmutableList.of(row3));
+        SourceEvent event2 = SourceEvent.createInsert(tableRef, new BinlogPosition("file1", 1), ImmutableList.of(row4));
         binlogPosition = new BinlogPosition("file1", 1);
         sourceEvents = ImmutableList.of(event1, event2);
 
@@ -239,8 +240,8 @@ public class UpdaterSpec {
 
         Row row1 = new Row("1", "foo-1"), row2 = new Row("2", "foo-2");
 
-        SourceEvent event1 = new SourceEvent(tableRef, new BinlogPosition("file1", 0), INSERT, Arrays.asList(row1));
-        SourceEvent event2 = new SourceEvent(tableRef, new BinlogPosition("file1", 1), INSERT, Arrays.asList(row2));
+        SourceEvent event1 = SourceEvent.createInsert(tableRef, new BinlogPosition("file1", 0), Arrays.asList(row1));
+        SourceEvent event2 = SourceEvent.createInsert(tableRef, new BinlogPosition("file1", 1), Arrays.asList(row2));
 
         sourceEvents = ImmutableList.of(event1, event2);
         Updater updater = new Updater(config, api, out, logMessages::add, state);

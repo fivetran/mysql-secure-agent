@@ -269,25 +269,20 @@ public class BinlogClient implements ReadSourceLog {
         BinlogPosition binlogPosition = event.getCurrentPosition();
         switch (header.getType()) {
             case EXT_WRITE_ROWS:
-                return new SourceEvent(
+                return SourceEvent.createInsert(
                         ((ModifyingEventBody) body).getTableRef(),
                         new BinlogPosition(binlogPosition.file, header.getNextPosition()),
-                        SourceEventType.INSERT,
-                        null,
                         ((ModifyingEventBody) body).getNewRows());
             case EXT_UPDATE_ROWS:
-                return new SourceEvent(
+                return SourceEvent.createUpdate(
                         ((ModifyingEventBody) body).getTableRef(),
                         new BinlogPosition(binlogPosition.file, header.getNextPosition()),
-                        SourceEventType.UPDATE,
                         ((ModifyingEventBody) body).getOldRows(),
                         ((ModifyingEventBody) body).getNewRows());
             case EXT_DELETE_ROWS:
-                return new SourceEvent(
+                return SourceEvent.createDelete(
                         ((ModifyingEventBody) body).getTableRef(),
                         new BinlogPosition(binlogPosition.file, header.getNextPosition()),
-                        SourceEventType.DELETE,
-                        null,
                         ((ModifyingEventBody) body).getNewRows());
             default:
                 throw new RuntimeException("Unexpected header: " + header.getType());
