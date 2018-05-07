@@ -17,6 +17,16 @@ public class BinlogPosition {
         this.position = position;
     }
 
+    public boolean equalOrAfter(BinlogPosition that) {
+        Integer thisFileNumber = Integer.parseInt(this.file.replaceAll("[^0-9]", ""));
+        Integer thatFileNumber = Integer.parseInt(that.file.replaceAll("[^0-9]", ""));
+
+        if (!thisFileNumber.equals(thatFileNumber))
+            return thisFileNumber >= thatFileNumber;
+
+        return this.position >= that.position;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

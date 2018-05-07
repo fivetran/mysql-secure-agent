@@ -28,7 +28,7 @@ public class Updater {
     private static final Long PAGE_SIZE = 10_000_000L;
 
     private final Config config;
-    private final MysqlApi mysql;
+    protected final MysqlApi mysql;
     private final Output out;
     private final Log log;
     protected final AgentState state;
@@ -42,9 +42,6 @@ public class Updater {
         this.state = state;
     }
 
-    /**
-     * Perform one cycle of update
-     */
     public void update() throws Exception {
         updateTableDefinitions();
 
@@ -153,11 +150,13 @@ public class Updater {
     void syncFromBinlog(BinlogPosition target) throws Exception {
         BinlogPosition startingPosition = state.binlogPosition;
 
+        // TODO what happens when you have a lot of activity on tables not present in state?
+        // we should be checking if these are tables we even care about? AKA std config
         try (EventReader eventReader = mysql.readSourceLog.events(startingPosition)) {
             while (true) {
                 SourceEvent sourceEvent = eventReader.readEvent();
 
-                if (target != null && sourceEvent.binlogPosition.equals(target))
+                if (target != null && sourceEvent.binlogPosition.equalOrAfter(target))
                     return;
 
                 if (sourceEvent.event == SourceEventType.TIMEOUT && state.tables.values().stream().anyMatch(tableState -> !tableState.finishedImport))

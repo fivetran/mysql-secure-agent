@@ -15,8 +15,8 @@ public interface ReadSourceLog {
 
     /**
      * From a given binlog position, returns all subsequent output in a common format
-     * @param position
+     * @param startPosition
      * @return
      */
-    EventReader events(BinlogPosition position);
+    EventReader events(BinlogPosition startPosition);
 }

@@ -49,7 +49,7 @@ public class UpdaterSpec {
             return readRows.iterator();
         }
     };
-    private BinlogPosition binlogPosition = new BinlogPosition("file", -1L);
+    private BinlogPosition binlogPosition;
     private Map<TableRef, TableDefinition> tableDefinitions = new HashMap<>();
     private AgentState state = new AgentState();
     private ReadSourceLog read = new ReadSourceLog() {
@@ -59,11 +59,15 @@ public class UpdaterSpec {
         }
 
         @Override
-        public EventReader events(BinlogPosition position) {
+        public EventReader events(BinlogPosition startPosition) {
+            Iterator<SourceEvent> sourceEventIterable = sourceEvents.iterator();
             return new EventReader() {
                 @Override
                 public SourceEvent readEvent() {
-                    return SourceEvent.createTimeout(position);
+                    if (sourceEventIterable.hasNext())
+                        return sourceEventIterable.next();
+                    else
+                        return SourceEvent.createTimeout(binlogPosition);
                 }
 
                 @Override
@@ -100,7 +104,7 @@ public class UpdaterSpec {
         config.schemas.get("test_schema").tables.put("ignored_table", new TableConfig());
         config.schemas.get("test_schema").tables.get("ignored_table").selected = false;
 
-        Updater updater = new Updater(config, api, out, logMessages::add, state);
+        Updater updater = new BatchUpdater(config, api, out, logMessages::add, state);
 
 
         Row row1 = row("1", "foo-1"), row2 = row("2", "foo-2");
@@ -113,7 +117,7 @@ public class UpdaterSpec {
         tableDefinitions.put(ignoredTable, ignoredTableDef);
 
         updater.updateTableDefinitions();
-        updater.sync();  // TODO fix this
+        updater.update();
 
         assertEquals(outEvents.size(), 3);
         assertThat(outEvents, not(contains(Emit.row(Event.createUpsert(ignoredTable, row1)))));
@@ -121,6 +125,7 @@ public class UpdaterSpec {
         assertThat(outEvents, not(contains(Emit.tableDefinition(ignoredTableDef))));
     }
 
+    // TODO move to BatchUpdaterSpec
     @Test
     public void update_fullSelectSyncThenBinlog() throws Exception {
         TableRef tableRef = new TableRef("test_schema", "test_table");
@@ -128,29 +133,25 @@ public class UpdaterSpec {
         TableDefinition selectedTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
         tableDefinitions.put(tableRef, selectedTableDef);
 
-        Updater updater = new Updater(config, api, out, logMessages::add, state);
-
-        Row row1 = row("1", "foo-1"), row2 = row("2", "foo-2"), row3 = row("3", "foo-3"), row4 = row("4", "foo-4");
-
+        Row row1 = row("1", "foo-1");
+        Row row2 = row("2", "foo-2");
+        Row row3 = row("3", "foo-3");
+        Row row4 = row("4", "foo-4");
         readRows = ImmutableList.of(row1, row2);
 
-        updater.update();
-
-        assertThat(outEvents.size(), equalTo(3));
-        assertTrue(outEvents.contains(Event.createUpsert(tableRef, row1)));
-        assertTrue(outEvents.contains(Event.createUpsert(tableRef, row2)));
-        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
-
-        SourceEvent event1 = SourceEvent.createInsert(tableRef, new BinlogPosition("file1", 0), ImmutableList.of(row3));
-        SourceEvent event2 = SourceEvent.createInsert(tableRef, new BinlogPosition("file1", 1), ImmutableList.of(row4));
-        binlogPosition = new BinlogPosition("file1", 1);
+        SourceEvent event1 = SourceEvent.createInsert(tableRef, new BinlogPosition("mysql-bin-changelog.000002", 100L), ImmutableList.of(row3));
+        SourceEvent event2 = SourceEvent.createInsert(tableRef, new BinlogPosition("mysql-bin-changelog.000002", 1000L), ImmutableList.of(row4));
+        binlogPosition = new BinlogPosition("mysql-bin-changelog.000002", 1500L);
         sourceEvents = ImmutableList.of(event1, event2);
 
-        updater.update();
+        new BatchUpdater(config, api, out, logMessages::add, state).update();
 
         assertThat(outEvents.size(), equalTo(6));
+        assertTrue(outEvents.contains(Event.createUpsert(tableRef, row1)));
+        assertTrue(outEvents.contains(Event.createUpsert(tableRef, row2)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row3)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row4)));
+        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
         // The table definition is included twice
         assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
     }

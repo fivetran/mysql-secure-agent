@@ -27,7 +27,7 @@ public class IntegrationWithRealSourceSpec {
         }
 
         @Override
-        public EventReader events(BinlogPosition position) {
+        public EventReader events(BinlogPosition startPosition) {
             return new EventReader() {
                 @Override
                 public SourceEvent readEvent() {

@@ -95,7 +95,7 @@ public class Event {
 
     @Override
     public String toString() {
-        return "SourceEvent{" +
+        return "Event{" +
                 "upsert=" + upsert +
                 ", delete=" + delete +
                 ", tableDefinition=" + tableDefinition +
