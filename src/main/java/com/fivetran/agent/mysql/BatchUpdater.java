@@ -22,6 +22,7 @@ public class BatchUpdater extends Updater {
         while (!done()) {
             sync();
         }
+        out.close();
     }
 
     @Override
