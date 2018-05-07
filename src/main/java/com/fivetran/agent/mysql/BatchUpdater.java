@@ -4,6 +4,7 @@
 package com.fivetran.agent.mysql;
 
 import com.fivetran.agent.mysql.config.Config;
+import com.fivetran.agent.mysql.output.BucketOutput;
 import com.fivetran.agent.mysql.source.BinlogPosition;
 import com.fivetran.agent.mysql.source.TableRef;
 import com.fivetran.agent.mysql.state.AgentState;
@@ -23,6 +24,7 @@ public class BatchUpdater extends Updater {
         while (!done()) {
             sync();
         }
+        ((BucketOutput) out).flushToBucket(state);
     }
 
     @Override

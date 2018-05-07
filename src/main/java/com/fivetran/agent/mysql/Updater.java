@@ -29,7 +29,7 @@ public class Updater {
 
     private final Config config;
     protected final MysqlApi mysql;
-    private final Output out;
+    final Output out;
     private final Log log;
     protected final AgentState state;
     Map<TableRef, TableDefinition> tablesToSync;
