@@ -5,7 +5,6 @@ package com.fivetran.agent.mysql;
 
 import com.fivetran.agent.mysql.config.Config;
 import com.fivetran.agent.mysql.output.BucketOutput;
-import com.fivetran.agent.mysql.source.BinlogPosition;
 import com.fivetran.agent.mysql.source.TableRef;
 import com.fivetran.agent.mysql.state.AgentState;
 
@@ -17,12 +16,11 @@ public class BatchUpdater extends Updater {
 
     @Override
     public void update() throws Exception {
-        BinlogPosition minimumDesiredProgress = mysql.readSourceLog.currentPosition();
         updateTableDefinitions();
 
-        while (!done(minimumDesiredProgress)) {
+        do {
             sync();
-        }
+        } while (!finishedImport());
 
         // TODO talk to meel about what to do here
         if (out instanceof BucketOutput)
@@ -39,8 +37,7 @@ public class BatchUpdater extends Updater {
         syncFromBinlog(mysql.readSourceLog.currentPosition());
     }
 
-    private boolean done(BinlogPosition minimumDesiredProgress) {
-        return state.tables.values().stream().allMatch(tableState -> tableState.finishedImport)
-            && state.binlogPosition.equalOrAfter(minimumDesiredProgress);
+    private boolean finishedImport() {
+        return state.tables.values().stream().allMatch(tableState -> tableState.finishedImport);
     }
 }
