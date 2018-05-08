@@ -24,7 +24,7 @@ public class ImportSourceTable implements ImportTable {
 
         String select = "SELECT " + quoted(selectColumns)
                 + " FROM " + quoted(table)
-                + pagingParams.map(p -> pagingClause(p)).orElse("");
+                + pagingParams.map(ImportSourceTable::pagingClause).orElse("");
 
         return query.unlimitedRows(select);
     }

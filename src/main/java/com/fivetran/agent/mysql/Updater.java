@@ -52,8 +52,11 @@ public class Updater {
 
     void sync() throws Exception {
         TableRef tableToImport = findTableToImport();
-        syncPageFromTable(tablesToSync.get(tableToImport));
-        syncFromBinlog();
+
+        if (tableToImport != null)
+            syncPageFromTable(tablesToSync.get(tableToImport));
+
+        syncFromBinlog(null);
     }
 
     TableRef findTableToImport() {
@@ -61,8 +64,7 @@ public class Updater {
             if (!state.tables.get(tableRef).finishedImport)
                 return tableRef;
         }
-
-        throw new RuntimeException("There should have been tables to sync, but none were found");
+        return null;
     }
 
     private void updateState(Set<TableRef> tablesToSync) {
@@ -156,9 +158,6 @@ public class Updater {
             while (true) {
                 SourceEvent sourceEvent = eventReader.readEvent();
 
-                if (target != null && sourceEvent.binlogPosition.equalOrAfter(target))
-                    return;
-
                 if (sourceEvent.event == SourceEventType.TIMEOUT && state.tables.values().stream().anyMatch(tableState -> !tableState.finishedImport))
                     return;
 
@@ -188,6 +187,9 @@ public class Updater {
                     }
                 }
                 state.binlogPosition = sourceEvent.binlogPosition;
+
+                if (target != null && sourceEvent.binlogPosition.equalOrAfter(target))
+                    return;
             }
         }
     }

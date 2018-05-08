@@ -24,23 +24,20 @@ public class BatchUpdater extends Updater {
         while (!done()) {
             sync();
         }
-        ((BucketOutput) out).flushToBucket(state);
+
+        // TODO talk to meel about what to do here
+        if (out instanceof BucketOutput)
+            ((BucketOutput) out).flushToBucket(state);
     }
 
     @Override
     void sync() throws Exception {
         TableRef tableToImport = findTableToImport();
-        syncPageFromTable(tablesToSync.get(tableToImport));
-        syncFromBinlog(mysql.readSourceLog.currentPosition());
-    }
 
-    @Override
-    TableRef findTableToImport() {
-        for (TableRef tableRef : state.tables.keySet()) {
-            if (!state.tables.get(tableRef).finishedImport)
-                return tableRef;
-        }
-        return null;
+        if (tableToImport != null)
+            syncPageFromTable(tablesToSync.get(tableToImport));
+
+        syncFromBinlog(mysql.readSourceLog.currentPosition());
     }
 
     private boolean done() {
