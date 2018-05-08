@@ -34,6 +34,7 @@ public class BucketOutput implements Output {
     private Instant startTime;
     private FileChannel fileChannel;
     private Path path;
+    private String checkpointState;
 
     public BucketOutput(BucketClient client) {
         this.client = client;
@@ -112,10 +113,12 @@ public class BucketOutput implements Output {
 
     private void checkpoint(AgentState state) {
         try {
+            checkpointState = Serialize.state(state);
+
             Duration timeSinceWrite = Duration.between(startTime, Instant.now());
             if ((timeSinceWrite.compareTo(AUTO_WRITE_INTERVAL) > 0 && fileChannel.size() > 0)
                     || fileChannel.size() > AUTO_WRITE_SIZE_LIMIT) {
-                flushToBucket(state);
+                flushToBucket();
             }
         } catch (IOException e) {
             LogMessage message = new LogGeneralException(e);
@@ -124,15 +127,14 @@ public class BucketOutput implements Output {
         }
     }
 
-    public void flushToBucket(AgentState state) throws IOException {
+    private void flushToBucket() throws IOException {
         client.copy("data", path.toFile());
         fileChannel.close();
         refreshFileChannel();
 
-        String stateJson = Serialize.state(state);
         Path statePath = Paths.get("mysql_state.json");
         FileChannel stateFileChannel = FileChannel.open(statePath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
-        stateFileChannel.write(ByteBuffer.wrap(stateJson.getBytes()));
+        stateFileChannel.write(ByteBuffer.wrap(checkpointState.getBytes()));
         client.copy("resources", statePath.toFile());
         stateFileChannel.close();
     }
@@ -150,6 +152,7 @@ public class BucketOutput implements Output {
     @Override
     public void close() {
         try {
+            flushToBucket();
             fileChannel.close();
         } catch (IOException e) {
             throw new RuntimeException(e);

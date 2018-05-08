@@ -9,6 +9,7 @@ import java.util.Map;
 public class SchemaConfig {
     public boolean selected = true;
     public final Map<String, TableConfig> tables = new HashMap<>();
+    public boolean selectOtherTables = true;
 
     @Override
     public String toString() {
@@ -18,6 +19,4 @@ public class SchemaConfig {
                 ", selectOtherTables=" + selectOtherTables +
                 '}';
     }
-
-    public boolean selectOtherTables = true;
 }
