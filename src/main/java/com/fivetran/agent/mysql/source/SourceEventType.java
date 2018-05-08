@@ -7,5 +7,6 @@ public enum SourceEventType {
     INSERT,
     UPDATE,
     DELETE,
-    TIMEOUT
+    TIMEOUT,
+    OTHER
 }

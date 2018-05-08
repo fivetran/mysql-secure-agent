@@ -36,6 +36,10 @@ public class SourceEvent {
         return new SourceEvent(null, latestPosition, SourceEventType.TIMEOUT, null, null);
     }
 
+    public static SourceEvent createOther(BinlogPosition latestPosition) {
+        return new SourceEvent(null, latestPosition, SourceEventType.OTHER, null, null);
+    }
+
     @Override
     public boolean equals(Object o){
         if (!(o instanceof SourceEvent)) {

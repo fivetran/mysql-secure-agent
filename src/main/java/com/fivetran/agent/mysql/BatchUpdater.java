@@ -23,10 +23,6 @@ public class BatchUpdater extends Updater {
         while (!done(minimumDesiredProgress)) {
             sync();
         }
-
-        // TODO talk to meel about what to do here
-        if (out instanceof BucketOutput)
-            ((BucketOutput) out).flushToBucket(state);
     }
 
     @Override
@@ -41,6 +37,6 @@ public class BatchUpdater extends Updater {
 
     private boolean done(BinlogPosition minimumDesiredProgress) {
         return state.tables.values().stream().allMatch(tableState -> tableState.finishedImport)
-            && state.binlogPosition.equalOrAfter(minimumDesiredProgress);
+            && state.binlogPosition.equals(minimumDesiredProgress);
     }
 }

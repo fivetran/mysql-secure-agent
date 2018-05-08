@@ -1,6 +1,6 @@
 /**
-* Copyright (c) Fivetran 2018
-**/
+ * Copyright (c) Fivetran 2018
+ **/
 package com.fivetran.agent.mysql.source.binlog.client;
 
 import com.fivetran.agent.mysql.Main;
@@ -109,18 +109,16 @@ public class BinlogClient implements ReadSourceLog {
 
             @Override
             public SourceEvent readEvent() {
-                BinlogEvent event;
-                do {
-                    try {
-                        event = rawEvents.next();
-                        latestPosition = event.getCurrentPosition();
-                    } catch (BinlogDisconnectedException | NoBinlogEventsReceived e) {
-                        reconnect();
-                        return SourceEvent.createTimeout(latestPosition);
-                    }
-                } while (!relevantEvent(event.getHeader().getType()));
+                try {
+                    BinlogEvent event = rawEvents.next();
 
-                return getSourceEvent(event);
+                    latestPosition = event.getCurrentPosition();
+
+                    return getSourceEvent(event);
+                } catch (BinlogDisconnectedException | NoBinlogEventsReceived e) {
+                    reconnect();
+                    return SourceEvent.createTimeout(latestPosition);
+                }
             }
 
             private void reconnect() {
@@ -186,12 +184,6 @@ public class BinlogClient implements ReadSourceLog {
         } catch (TimeoutException | IOException e) {
             throw new RuntimeException("Connection failed");
         }
-    }
-
-    private boolean relevantEvent(EventType type) {
-        return type == EventType.EXT_DELETE_ROWS
-                || type == EventType.EXT_WRITE_ROWS
-                || type == EventType.EXT_UPDATE_ROWS;
     }
 
     private int getBinlogChecksumLength(PacketChannel channel) throws IOException, TimeoutException {
@@ -285,7 +277,7 @@ public class BinlogClient implements ReadSourceLog {
                         new BinlogPosition(binlogPosition.file, header.getNextPosition()),
                         ((ModifyingEventBody) body).getNewRows());
             default:
-                throw new RuntimeException("Unexpected header: " + header.getType());
+                return SourceEvent.createOther(binlogPosition);
         }
     }
 }
