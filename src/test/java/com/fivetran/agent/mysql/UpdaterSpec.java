@@ -4,11 +4,8 @@
 package com.fivetran.agent.mysql;
 
 import com.fivetran.agent.mysql.config.Config;
-import com.fivetran.agent.mysql.config.SchemaConfig;
-import com.fivetran.agent.mysql.config.TableConfig;
 import com.fivetran.agent.mysql.log.LogMessage;
 import com.fivetran.agent.mysql.output.ColumnDefinition;
-import com.fivetran.agent.mysql.output.Emit;
 import com.fivetran.agent.mysql.output.Event;
 import com.fivetran.agent.mysql.output.TableDefinition;
 import com.fivetran.agent.mysql.source.BinlogPosition;
@@ -23,12 +20,9 @@ import org.junit.Test;
 
 import java.util.*;
 
-import static com.fivetran.agent.mysql.source.SourceEventType.INSERT;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.Matchers.contains;
 import static org.junit.Assert.*;
 
+// TODO since Updater#update will infinitely loop, we can use BatchUpdaterSpec for integration tests. We'll write what unit tests we can here
 public class UpdaterSpec {
     private Config config = new Config();
     private List<Row> readRows = new ArrayList<>();
@@ -94,116 +88,6 @@ public class UpdaterSpec {
     private final List<LogMessage> logMessages = new ArrayList<>();
 
     @Test
-    public void update_onlySyncSelectedTablesWithDefaultConfigValues() throws Exception {
-        TableRef selectedTable = new TableRef("test_schema", "selected_table");
-        TableRef ignoredTable = new TableRef("test_schema", "ignored_table");
-
-        Config config = new Config();
-        config.schemas.put("test_schema", new SchemaConfig());
-        config.schemas.get("test_schema").tables.put("selected_table", new TableConfig());
-        config.schemas.get("test_schema").tables.put("ignored_table", new TableConfig());
-        config.schemas.get("test_schema").tables.get("ignored_table").selected = false;
-
-        Updater updater = new BatchUpdater(config, api, out, logMessages::add, state);
-
-
-        Row row1 = row("1", "foo-1"), row2 = row("2", "foo-2");
-        readRows = ImmutableList.of(row1, row2);
-
-        tableDefinitions.clear();
-        TableDefinition selectedTableDef = new TableDefinition(selectedTable, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
-        tableDefinitions.put(selectedTable, selectedTableDef);
-        TableDefinition ignoredTableDef = new TableDefinition(ignoredTable, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
-        tableDefinitions.put(ignoredTable, ignoredTableDef);
-
-        updater.updateTableDefinitions();
-        updater.update();
-
-        assertEquals(outEvents.size(), 3);
-        assertThat(outEvents, not(contains(Emit.row(Event.createUpsert(ignoredTable, row1)))));
-        assertThat(outEvents, not(contains(Emit.row(Event.createUpsert(ignoredTable, row2)))));
-        assertThat(outEvents, not(contains(Emit.tableDefinition(ignoredTableDef))));
-    }
-
-    // TODO move to BatchUpdaterSpec
-    @Test
-    public void update_fullSelectSyncThenBinlog() throws Exception {
-        TableRef tableRef = new TableRef("test_schema", "test_table");
-        tableDefinitions.clear();
-        TableDefinition selectedTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
-        tableDefinitions.put(tableRef, selectedTableDef);
-
-        Row row1 = row("1", "foo-1");
-        Row row2 = row("2", "foo-2");
-        Row row3 = row("3", "foo-3");
-        Row row4 = row("4", "foo-4");
-        readRows = ImmutableList.of(row1, row2);
-
-        SourceEvent event1 = SourceEvent.createInsert(tableRef, new BinlogPosition("mysql-bin-changelog.000002", 100L), ImmutableList.of(row3));
-        SourceEvent event2 = SourceEvent.createInsert(tableRef, new BinlogPosition("mysql-bin-changelog.000002", 1000L), ImmutableList.of(row4));
-        binlogPosition = new BinlogPosition("mysql-bin-changelog.000002", 1500L);
-        sourceEvents = ImmutableList.of(event1, event2);
-
-        new BatchUpdater(config, api, out, logMessages::add, state).update();
-
-        assertThat(outEvents.size(), equalTo(6));
-        assertTrue(outEvents.contains(Event.createUpsert(tableRef, row1)));
-        assertTrue(outEvents.contains(Event.createUpsert(tableRef, row2)));
-        assertTrue(outEvents.contains(Event.createUpsert(tableRef, row3)));
-        assertTrue(outEvents.contains(Event.createUpsert(tableRef, row4)));
-        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
-        // The table definition is included twice
-        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
-    }
-
-//    @Test
-//    public void update_withExistingSelectState() {
-//        TableRef tableRef = new TableRef("test_schema", "test_table");
-//
-//        AgentState state = new AgentState();
-//        TableState tableState = new TableState();
-//        tableState.lastSyncedPrimaryKey = Optional.of(Collections.singletonMap("id", "3"));
-//        state.tables.put(tableRef, tableState);
-//        tableDefinitions.clear();
-//        TableDefinition selectedTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
-//        tableDefinitions.put(tableRef, selectedTableDef);
-//
-//        Row row1 = row("1", "foo-1"), row2 = row("2", "foo-2"), row3 = row("3", "foo-3"), row4 = row("4", "I pity the foo");
-//        readRows = ImmutableList.of(row1, row2, row3, row4);
-//
-//        Updater updater = new Updater(config, api, out, logMessages::add, state);
-//
-//        updater.update();
-//
-//        System.out.println();
-//    }
-//
-//    // TODO turns out incremental updates aren't working. Who knew? Oh, right because it depends on the API part to serve up the right rows and we just wanna test the query
-//
-//    // TODO how do we incrementally update hashed keys?
-//
-    @Test
-    public void update_syncHashedColumns() throws Exception {
-        TableRef tableRef = new TableRef("test_schema", "test_table");
-        Config config = new Config();
-        config.cryptoSalt = "sodium chloride";
-        config.putColumn(config, tableRef, "id", true, true);
-
-        Row row1 = row("1", "foo-1"), row2 = row("2", "foo-2");
-        readRows = ImmutableList.of(row1, row2);
-
-        tableDefinitions.clear();
-        tableDefinitions.put(tableRef, new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false))));
-
-        Updater updater = new Updater(config, api, out, logMessages::add, state);
-        updater.update();
-
-        assertFalse(outEvents.contains(Event.createUpsert(tableRef, Arrays.asList("1", "foo-1"))));
-        assertTrue(outEvents.contains(Event.createUpsert(tableRef, Arrays.asList("AnZXUjEr5i2a57kXUtI6dXftv+E=", "foo-1"))));
-        assertTrue(outEvents.contains(Event.createUpsert(tableRef, Arrays.asList("jUdn9gOx372QFiYR9zRyZp0VQEw=", "foo-2"))));
-    }
-
-    @Test
     public void selectSync() {
         TableRef tableRef = new TableRef("test_schema", "sync_table");
         AgentState state = new AgentState();
@@ -219,36 +103,6 @@ public class UpdaterSpec {
         tableDefinitions.put(tableRef, tableDef);
 
         updater.syncPageFromTable(tableDef);
-
-        assertTrue(outEvents.contains(Event.createTableDefinition(tableDef)));
-
-        assertTrue(outEvents.contains(Event.createUpsert(tableRef, Arrays.asList("1", "foo-1"))));
-        assertTrue(outEvents.contains(Event.createUpsert(tableRef, Arrays.asList("2", "foo-2"))));
-    }
-
-    @Test
-    public void binlogSync_allInserts() throws Exception {
-        TableRef tableRef = new TableRef("test_schema", "binlog_sync");
-        AgentState state = new AgentState();
-        state.binlogPosition = new BinlogPosition("current_file", 1L);
-        TableState tableState = new TableState();
-        tableState.finishedImport = true;
-        state.tables.put(tableRef, tableState);
-
-        tableDefinitions.clear();
-        TableDefinition tableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
-        tableDefinitions.put(tableRef, tableDef);
-
-        Row row1 = new Row("1", "foo-1"), row2 = new Row("2", "foo-2");
-
-        SourceEvent event1 = SourceEvent.createInsert(tableRef, new BinlogPosition("file1", 0), Arrays.asList(row1));
-        SourceEvent event2 = SourceEvent.createInsert(tableRef, new BinlogPosition("file1", 1), Arrays.asList(row2));
-
-        sourceEvents = ImmutableList.of(event1, event2);
-        Updater updater = new Updater(config, api, out, logMessages::add, state);
-        updater.update();
-
-        assertEquals(outEvents.size(), 3);
 
         assertTrue(outEvents.contains(Event.createTableDefinition(tableDef)));
 
