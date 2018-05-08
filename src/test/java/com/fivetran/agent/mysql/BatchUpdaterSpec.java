@@ -19,6 +19,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.*;
+import java.util.function.Supplier;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
@@ -126,20 +127,30 @@ public class BatchUpdaterSpec {
         Row row1 = row("1", "foo-1"), row2 = row("2", "foo-2"), row3 = row("3", "foo-3"), row4 = row("4", "foo-4");
         readRows = ImmutableList.of(row1, row2);
 
+        BatchUpdater initialImport = new BatchUpdater(config, api, out, logMessages::add, state);
+        initialImport.update();
+
+        assertThat(outEvents.size(), equalTo(4));
+        assertTrue(outEvents.contains(Event.createUpsert(tableRef, row1)));
+        assertTrue(outEvents.contains(Event.createUpsert(tableRef, row2)));
+        assertTrue(outEvents.contains(Event.createNop()));
+        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
+
+        outEvents.clear();
+
         SourceEvent event1 = SourceEvent.createInsert(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 2L), ImmutableList.of(row3));
         SourceEvent event2 = SourceEvent.createInsert(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 3L), ImmutableList.of(row4));
         binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 4L);
         sourceEvents = ImmutableList.of(event1, event2);
 
-        new BatchUpdater(config, api, out, logMessages::add, state).update();
+        BatchUpdater incrementalUpdate = new BatchUpdater(config, api, out, logMessages::add, state);
+        incrementalUpdate.update();
 
-        assertThat(outEvents.size(), equalTo(6));
-        assertTrue(outEvents.contains(Event.createUpsert(tableRef, row1)));
-        assertTrue(outEvents.contains(Event.createUpsert(tableRef, row2)));
+        assertThat(outEvents.size(), equalTo(3));
+
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row3)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row4)));
         assertTrue(outEvents.contains(Event.createNop()));
-        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
     }
 
     @Test
@@ -173,9 +184,16 @@ public class BatchUpdaterSpec {
         state.tables.put(tableRef, tableState);
         state.binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 1L);
 
-        tableDefinitions.clear();
-        TableDefinition tableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
-        tableDefinitions.put(tableRef, tableDef);
+        TableDefinition initialTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
+        TableDefinition updatedTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false), new ColumnDefinition("update", "text", false)));
+
+        Supplier<Map<TableRef, TableDefinition>> updatableTableDefinitions = () -> {
+            if (outEvents.size() == 0)
+                return Collections.singletonMap(tableRef, initialTableDef);
+            else
+                return Collections.singletonMap(tableRef, updatedTableDef);
+        };
+        MysqlApi customApi = new MysqlApi(importTable, null, null, updatableTableDefinitions, read);
 
         Row standardRow = new Row("1", "foo-1"), modifiedRow = new Row("2", "foo-2", "bar-3");
 
@@ -184,14 +202,13 @@ public class BatchUpdaterSpec {
         sourceEvents = ImmutableList.of(standardEvent, modifiedEvent);
         binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 4L);
 
-        new BatchUpdater(config, api, out, logMessages::add, state).update();
+        new BatchUpdater(config, customApi, out, logMessages::add, state).update();
 
         assertEquals(outEvents.size(), 4);
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, standardRow)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, modifiedRow)));
         assertTrue(outEvents.contains(Event.createNop()));
-        // TODO find a way to update the table def
-        assertTrue(outEvents.contains(Event.createTableDefinition(tableDef))); // This is what we wanted to see
+        assertTrue(outEvents.contains(Event.createTableDefinition(updatedTableDef)));
     }
 
     @Test
