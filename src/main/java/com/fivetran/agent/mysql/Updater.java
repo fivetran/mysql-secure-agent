@@ -5,6 +5,7 @@ package com.fivetran.agent.mysql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fivetran.agent.mysql.config.Config;
+import com.fivetran.agent.mysql.config.SchemaConfig;
 import com.fivetran.agent.mysql.config.TableConfig;
 import com.fivetran.agent.mysql.hash.Hash;
 import com.fivetran.agent.mysql.log.BeginSelectPage;
@@ -161,16 +162,12 @@ public class Updater {
                 if (sourceEvent.event == SourceEventType.TIMEOUT && state.tables.values().stream().anyMatch(tableState -> !tableState.finishedImport))
                     return;
 
-                if (sourceEvent.event != SourceEventType.TIMEOUT && !state.tables.containsKey(sourceEvent.tableRef)) {
+                if (isDMLEvent(sourceEvent.event) && isNewSelectedTable(sourceEvent.tableRef)) {
                     updateTableDefinitions();
                     return;
                 }
-                if (sourceEvent.event == SourceEventType.TIMEOUT)
-                    out.emitEvent(Event.createNop(), state);
 
-                if (sourceEvent.event != SourceEventType.TIMEOUT) {
-                    // todo manage when we emit tableDefinition events so that there is always a relevant table definition before an event in a file
-
+                if (isDMLEvent(sourceEvent.event)) {
                     // todo: in cases when we cannot reconcile table definitions, error out and print message to resync table
                     switch (sourceEvent.event) {
                         case INSERT:
@@ -186,11 +183,42 @@ public class Updater {
                             throw new RuntimeException("Unexpected switch case for source event type " + sourceEvent.event);
                     }
                 }
+
                 state.binlogPosition = sourceEvent.binlogPosition;
 
-                if (target != null && sourceEvent.binlogPosition.equalOrAfter(target))
+                if (!isDMLEvent(sourceEvent.event))
+                    out.emitEvent(Event.createNop(), state);
+
+                if (target != null && sourceEvent.binlogPosition.equals(target))
                     return;
             }
+        }
+    }
+
+    private boolean isNewSelectedTable(TableRef tableRef) {
+        if (state.tables.containsKey(tableRef))
+            return false;
+
+        SchemaConfig schemaConfig = config.schemas.get(tableRef.schemaName);
+
+        if (schemaConfig == null || !schemaConfig.selected)
+            return false;
+
+        TableConfig tableConfig = schemaConfig.tables.get(tableRef.tableName);
+
+        return (tableConfig != null || schemaConfig.selectOtherTables)
+                && (tableConfig == null || tableConfig.selected);
+
+    }
+
+    private boolean isDMLEvent(SourceEventType eventType) {
+        switch (eventType) {
+            case INSERT:
+            case UPDATE:
+            case DELETE:
+                return true;
+            default:
+                return false;
         }
     }
 
