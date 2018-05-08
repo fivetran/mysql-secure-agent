@@ -10,18 +10,17 @@ import com.fivetran.agent.mysql.source.TableRef;
 import com.fivetran.agent.mysql.state.AgentState;
 
 public class BatchUpdater extends Updater {
-    private final BinlogPosition minimumTarget;
 
     public BatchUpdater(Config config, MysqlApi mysql, Output out, Log log, AgentState state) {
         super(config, mysql, out, log, state);
-        this.minimumTarget = mysql.readSourceLog.currentPosition();
     }
 
     @Override
     public void update() throws Exception {
+        BinlogPosition minimumDesiredProgress = mysql.readSourceLog.currentPosition();
         updateTableDefinitions();
 
-        while (!done()) {
+        while (!done(minimumDesiredProgress)) {
             sync();
         }
 
@@ -40,8 +39,8 @@ public class BatchUpdater extends Updater {
         syncFromBinlog(mysql.readSourceLog.currentPosition());
     }
 
-    private boolean done() {
+    private boolean done(BinlogPosition minimumDesiredProgress) {
         return state.tables.values().stream().allMatch(tableState -> tableState.finishedImport)
-            && state.binlogPosition.equalOrAfter(minimumTarget);
+            && state.binlogPosition.equalOrAfter(minimumDesiredProgress);
     }
 }
