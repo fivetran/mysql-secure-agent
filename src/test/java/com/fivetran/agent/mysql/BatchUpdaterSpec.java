@@ -228,17 +228,21 @@ public class BatchUpdaterSpec {
         Row insertedRow = new Row("1", "foo-1"), updatedRow = new Row("2", "foo-2");
 
         SourceEvent insert = SourceEvent.createInsert(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 2L), ImmutableList.of(insertedRow));
-        SourceEvent update = SourceEvent.createUpdate(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 3L), ImmutableList.of(insertedRow), ImmutableList.of(updatedRow));
-        SourceEvent delete = SourceEvent.createDelete(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 4L), ImmutableList.of(updatedRow));
-        sourceEvents = ImmutableList.of(insert, update, delete);
-        binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 5L);
+        SourceEvent other1 = SourceEvent.createOther(new BinlogPosition("mysql-bin-changelog.000001", 3L));
+        SourceEvent update = SourceEvent.createUpdate(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 4L), ImmutableList.of(insertedRow), ImmutableList.of(updatedRow));
+        SourceEvent other2 = SourceEvent.createOther(new BinlogPosition("mysql-bin-changelog.000001", 5L));
+        SourceEvent delete = SourceEvent.createDelete(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 6L), ImmutableList.of(updatedRow));
+        sourceEvents = ImmutableList.of(insert, other1, update, other2, delete);
+        binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 7L);
 
         new BatchUpdater(config, api, out, logMessages::add, state).update();
 
-        assertEquals(outEvents.size(), 5);
+        assertEquals(outEvents.size(), 7);
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, insertedRow)));
-        assertTrue(outEvents.contains(Event.createDelete(tableRef, insertedRow)));  // this delete is from the update
+        assertTrue(outEvents.contains(Event.createNop()));
+        assertTrue(outEvents.contains(Event.createDelete(tableRef, insertedRow)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, updatedRow)));
+        assertTrue(outEvents.contains(Event.createNop()));
         assertTrue(outEvents.contains(Event.createDelete(tableRef, updatedRow)));
         assertTrue(outEvents.contains(Event.createNop()));
     }
