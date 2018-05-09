@@ -93,7 +93,6 @@ public class BatchUpdaterSpec {
         TableRef selectedTable = new TableRef("test_schema", "selected_table");
         TableRef ignoredTable = new TableRef("test_schema", "ignored_table");
 
-        Config config = new Config();
         config.schemas.put("test_schema", new SchemaConfig());
         config.schemas.get("test_schema").tables.put("selected_table", new TableConfig());
         config.schemas.get("test_schema").tables.put("ignored_table", new TableConfig());
@@ -111,15 +110,19 @@ public class BatchUpdaterSpec {
         new BatchUpdater(config, api, out, logMessages::add, state).update();
 
         assertEquals(outEvents.size(), 4);
+        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
         assertTrue(outEvents.contains(Event.createUpsert(selectedTable, row1)));
         assertTrue(outEvents.contains(Event.createUpsert(selectedTable, row2)));
         assertTrue(outEvents.contains(Event.createNop()));
-        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
     }
 
     @Test
     public void update_fullSelectSyncThenBinlog() throws Exception {
         TableRef tableRef = new TableRef("test_schema", "test_table");
+
+        config.schemas.put("test_schema", new SchemaConfig());
+        config.schemas.get("test_schema").selectOtherTables = true;
+
         tableDefinitions.clear();
         TableDefinition selectedTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
         tableDefinitions.put(tableRef, selectedTableDef);
@@ -131,10 +134,10 @@ public class BatchUpdaterSpec {
         initialImport.update();
 
         assertThat(outEvents.size(), equalTo(4));
+        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row1)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row2)));
         assertTrue(outEvents.contains(Event.createNop()));
-        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
 
         outEvents.clear();
 
@@ -156,7 +159,7 @@ public class BatchUpdaterSpec {
     @Test
     public void update_syncHashedColumns() throws Exception {
         TableRef tableRef = new TableRef("test_schema", "test_table");
-        Config config = new Config();
+
         config.cryptoSalt = "sodium chloride";
         config.putColumn(config, tableRef, "id", true, true);
 
@@ -177,6 +180,10 @@ public class BatchUpdaterSpec {
     @Test
     public void binlogSync_updateTableDefinition() throws Exception {
         TableRef tableRef = new TableRef("test_schema", "test_table");
+
+        config.schemas.put("test_schema", new SchemaConfig());
+        config.schemas.get("test_schema").selectOtherTables = true;
+
         AgentState state = new AgentState();
         TableState tableState = new TableState();
 
@@ -205,15 +212,19 @@ public class BatchUpdaterSpec {
         new BatchUpdater(config, customApi, out, logMessages::add, state).update();
 
         assertEquals(outEvents.size(), 4);
+        assertTrue(outEvents.contains(Event.createTableDefinition(updatedTableDef)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, standardRow)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, modifiedRow)));
         assertTrue(outEvents.contains(Event.createNop()));
-        assertTrue(outEvents.contains(Event.createTableDefinition(updatedTableDef)));
     }
 
     @Test
     public void binlogSync_allBinlogEvents() throws Exception {
         TableRef tableRef = new TableRef("test_schema", "test_table");
+
+        config.schemas.put("test_schema", new SchemaConfig());
+        config.schemas.get("test_schema").selectOtherTables = true;
+
         AgentState state = new AgentState();
         TableState tableState = new TableState();
 
@@ -245,6 +256,59 @@ public class BatchUpdaterSpec {
         assertTrue(outEvents.contains(Event.createNop()));
         assertTrue(outEvents.contains(Event.createDelete(tableRef, updatedRow)));
         assertTrue(outEvents.contains(Event.createNop()));
+    }
+
+    // TODO test for what should happen when SchemaConfig selected = false, but selectOtherTables = true
+    // TODO maybe play around with this test so that it will import the table after doing a binlog sync
+    @Test
+    public void update_onlySyncSelectedTablesFoundInBinglog() throws Exception {
+        TableRef selectedTable = new TableRef("selected_schema", "selected_table");
+        TableRef ignoredTable = new TableRef("selected_schema", "ignored_table");
+        TableRef ignoredSchema = new TableRef("ignored_schema", "ignored_table");
+
+        config.schemas.put("selected_schema", new SchemaConfig());
+        config.schemas.get("selected_schema").tables.put("selected_table", new TableConfig());
+        config.schemas.get("selected_schema").tables.put("ignored_table", new TableConfig());
+        config.schemas.get("selected_schema").tables.get("ignored_table").selected = false;
+
+        config.schemas.put("ignored_schema", new SchemaConfig());
+        config.schemas.get("ignored_schema").selected = false;
+        config.schemas.get("ignored_schema").tables.put("ignored_table", new TableConfig());
+        config.schemas.get("ignored_schema").tables.get("ignored_table").selected = false;
+
+        Row row1 = row("1", "foo-1"), row2 = row("2", "foo-2"), row3 = row("3", "foo-3");
+
+        SourceEvent insertIgnoredTable = SourceEvent.createInsert(ignoredTable, new BinlogPosition("mysql-bin-changelog.000001", 2L), ImmutableList.of(row1));
+        SourceEvent insertIgnoredSchema = SourceEvent.createInsert(ignoredSchema, new BinlogPosition("mysql-bin-changelog.000001", 3L), ImmutableList.of(row2));
+        SourceEvent insertSelectedTable = SourceEvent.createInsert(selectedTable, new BinlogPosition("mysql-bin-changelog.000001", 4L), ImmutableList.of(row3));
+        sourceEvents = ImmutableList.of(insertIgnoredTable, insertIgnoredSchema, insertSelectedTable);
+        binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 5L);
+
+        TableDefinition tableDef = new TableDefinition(selectedTable, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
+
+        Supplier<Map<TableRef, TableDefinition>> updatableTableDefinitions = () -> {
+            if (outEvents.size() == 0)
+                return Collections.emptyMap();
+            else
+                return Collections.singletonMap(selectedTable, tableDef);
+        };
+
+        MysqlApi customApi = new MysqlApi(importTable, null, null, updatableTableDefinitions, read);
+
+        new BatchUpdater(config, customApi, out, logMessages::add, state).update();
+
+        assertEquals(outEvents.size(), 7);
+
+        // First binlog sync
+        assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredTable
+        assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredSchema
+        assertTrue(outEvents.contains(Event.createTableDefinition(tableDef)));  // insertSelectedTable
+
+        // Second binlog sync
+        assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredTable
+        assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredSchema
+        assertTrue(outEvents.contains(Event.createUpsert(selectedTable, row3)));  // insertSelectedTable
+        assertTrue(outEvents.contains(Event.createNop()));  // TIMEOUT
     }
 
     // TODO we would have to mimick the paging param code to make this work. Is it worth it?
