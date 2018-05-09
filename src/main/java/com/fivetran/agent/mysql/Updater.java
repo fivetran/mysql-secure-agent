@@ -205,7 +205,7 @@ public class Updater {
 
         Optional<TableConfig> tableConfig = Optional.ofNullable(schemaConfig.tables.get(sourceEvent.tableRef.tableName));
 
-        return Config.ignoreTable(schemaConfig, tableConfig);
+        return Config.ignorable(schemaConfig, tableConfig);
     }
 
     private void emitFromInsert(SourceEvent event) {

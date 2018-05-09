@@ -69,7 +69,7 @@ public class Config {
         for (TableDefinition tableDef : tableDefinitions.values()) {
             SchemaConfig schemaConfig = getSchema(tableDef.table.schemaName).orElse(new SchemaConfig());
             Optional<TableConfig> tableConfig = getTable(tableDef.table);
-            if (ignoreTable(schemaConfig, tableConfig)) {
+            if (ignorable(schemaConfig, tableConfig)) {
                 continue;
             }
             tablesToSync.put(tableDef.table, tableDef);
@@ -77,7 +77,7 @@ public class Config {
         return tablesToSync;
     }
 
-    public static boolean ignoreTable(SchemaConfig schemaConfig, Optional<TableConfig> tableConfig) {
+    public static boolean ignorable(SchemaConfig schemaConfig, Optional<TableConfig> tableConfig) {
         return (tableConfig.isPresent() && !tableConfig.get().selected)
                 || (!tableConfig.isPresent() && !schemaConfig.selectOtherTables);
     }
