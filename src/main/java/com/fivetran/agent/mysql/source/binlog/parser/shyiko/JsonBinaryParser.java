@@ -483,11 +483,13 @@ public class JsonBinaryParser {
                         entries[i] = new ValueEntry(type).setValue(readInt32());
                         break;
                     }
+                    // fall through
                 case UINT32:
                     if (!small) {
                         entries[i] = new ValueEntry(type).setValue(readUInt32());
                         break;
                     }
+                    // fall through
                 default:
                     // It is an offset, not a value ...
                     int offset = readUnsignedIndex(Integer.MAX_VALUE, small, "value offset in");
