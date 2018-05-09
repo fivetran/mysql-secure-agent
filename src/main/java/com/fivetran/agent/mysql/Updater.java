@@ -203,11 +203,9 @@ public class Updater {
         if (schemaConfig == null || !schemaConfig.selected)
             return true;
 
-        TableConfig tableConfig = schemaConfig.tables.get(sourceEvent.tableRef.tableName);
+        Optional<TableConfig> tableConfig = Optional.ofNullable(schemaConfig.tables.get(sourceEvent.tableRef.tableName));
 
-        return (tableConfig != null || !schemaConfig.selectOtherTables)
-                && (tableConfig == null || !tableConfig.selected);
-
+        return Config.ignoreTable(schemaConfig, tableConfig);
     }
 
     private void emitFromInsert(SourceEvent event) {

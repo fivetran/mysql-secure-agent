@@ -69,13 +69,17 @@ public class Config {
         for (TableDefinition tableDef : tableDefinitions.values()) {
             SchemaConfig schemaConfig = getSchema(tableDef.table.schemaName).orElse(new SchemaConfig());
             Optional<TableConfig> tableConfig = getTable(tableDef.table);
-            if ((tableConfig.isPresent() && !tableConfig.get().selected)
-                    || (!tableConfig.isPresent() && !schemaConfig.selectOtherTables)) {
+            if (ignoreTable(schemaConfig, tableConfig)) {
                 continue;
             }
             tablesToSync.put(tableDef.table, tableDef);
         }
         return tablesToSync;
+    }
+
+    public static boolean ignoreTable(SchemaConfig schemaConfig, Optional<TableConfig> tableConfig) {
+        return (tableConfig.isPresent() && !tableConfig.get().selected)
+                || (!tableConfig.isPresent() && !schemaConfig.selectOtherTables);
     }
 
     @Override
