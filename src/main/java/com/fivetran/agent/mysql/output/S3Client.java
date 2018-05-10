@@ -34,9 +34,14 @@ public class S3Client implements BucketClient {
 
     @Override
     public void copy(String subdirectory, File file) {
-        List<Tag> tags = ImmutableList.of(new Tag("data_file", "true"));
-        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, prefix.orElse("") + (!subdirectory.isEmpty() ? subdirectory + "/" : "") + file.getName(), file)
-                .withTagging(new ObjectTagging(tags));
+        List<Tag> dataFileTag = ImmutableList.of(new Tag("data_file", "true"));
+        String fullPath = prefix.orElse("") + (!subdirectory.isEmpty() ? subdirectory + "/" : "") + file.getName();
+
+        PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, fullPath, file);
+
+        if (subdirectory.equals("data"))
+            putObjectRequest.withTagging(new ObjectTagging(dataFileTag));
+
         client.putObject(putObjectRequest);
     }
 }
