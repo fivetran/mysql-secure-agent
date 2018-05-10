@@ -35,6 +35,7 @@ public class Main {
 
         MysqlApi api = new MysqlApi(importTable, cleanup, null, tableDefinitions, client);
 
+        // TODO deserializing state from the file may not be great on a failover. Might be better to check s3 first
         try (Output out = new BucketOutput(new S3Client(creds.s3Credentials.bucket))) {
             Updater updater = new Updater(new Config(), api, out, LOG, Deserialize.state());
             updater.update();

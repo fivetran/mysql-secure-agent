@@ -194,6 +194,7 @@ public class Updater {
         }
     }
 
+    // TODO what about selectOtherSchemas?
     private boolean ignorable(SourceEvent sourceEvent) {
         if (sourceEvent.event == SourceEventType.TIMEOUT || sourceEvent.event == SourceEventType.OTHER)
             return true;
