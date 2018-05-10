@@ -72,15 +72,13 @@ public class TableDefinitionsSpec {
             public List<Record> records(String query) {
                 ImmutableList<String> columns = ImmutableList.of("TABLE_SCHEMA", "TABLE_NAME", "COLUMN_NAME", "ORDINAL_POSITION", "COLUMN_TYPE", "CHARACTER_SET_NAME", "COLUMN_KEY", "REFERENCED_TABLE_SCHEMA", "REFERENCED_TABLE_NAME", "REFERENCED_COLUMN_NAME");
                 List<Record> records = ImmutableList.of(
-                        new Record(AgentUtils.map(
-                                columns,
+                        new Record(AgentUtils.map(columns,
                                 ImmutableList.of("test_schema", "test_table", "id", "1", "int", "latin1", "PRI", "test_schema", "reference_table_1", "reference_id")
                         )),
                         new Record(AgentUtils.map(columns,
                                 ImmutableList.of("test_schema", "test_table", "from_reference_1", "2", "int", "latin1", "", "test_schema", "reference_table_1", "to_reference_1")
                         )),
-                        new Record(AgentUtils.map(
-                                columns,
+                        new Record(AgentUtils.map(columns,
                                 ImmutableList.of("test_schema", "test_table", "id", "1", "int", "latin1", "PRI", "test_schema", "reference_table_2", "reference_id")
                         )),
                         new Record(AgentUtils.map(columns,

@@ -17,7 +17,8 @@ public class TableDefinition {
     public final List<ColumnDefinition> columns;
 
     /** Multiple foreign keys can exist on a table in MySQL. This set represents
-     * all of the foreign keys present on this table
+     * all of the foreign keys present on this table. The TableRef key represents
+     * the table that is pointed to by the ForeignKey value.
      */
     public Map<TableRef, ForeignKey> foreignKeys;
 

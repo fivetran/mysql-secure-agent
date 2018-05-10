@@ -28,17 +28,18 @@ public class TableDefinitions implements Supplier<Map<TableRef, TableDefinition>
             TableRef tableRef = columnRef.table;
             tables.putIfAbsent(tableRef, new TableDefinition(tableRef, new ArrayList<>(), new HashMap<>()));
             TableDefinition tableDefinition = tables.get(tableRef);
-            // we can just grab the first, since all we care about is name, type, and key, and those will never differ if there are multiple columns
-            ColumnDefinition columnDef = new ColumnDefinition(columnRef.columnName, columnAttributes.get(0).columnType, columnAttributes.get(0).primaryKey);
-
 
             for (ColumnAttributes attributes : columnAttributes) {
                 attributes.referencedColumn.ifPresent(referencedColumn -> {
-                    ForeignKey fKey = tableDefinition.foreignKeys.getOrDefault(columnRef.table, new ForeignKey());
+                    ForeignKey fKey = tableDefinition.foreignKeys.getOrDefault(referencedColumn.table, new ForeignKey());
                     fKey.columns.add(columnRef.columnName);
                     fKey.referencedColumns.add(referencedColumn.columnName);
+                    tableDefinition.foreignKeys.put(referencedColumn.table, fKey);
                 });
             }
+
+            // we can just grab the first, since all we care about is name, type, and key, and those will never differ if there are multiple columns
+            ColumnDefinition columnDef = new ColumnDefinition(columnRef.columnName, columnAttributes.get(0).columnType, columnAttributes.get(0).primaryKey);
 
             // TODO think about whether we'll need foreign keys - if so, this return has to go
             if (tableDefinition.columns.contains(columnDef))
