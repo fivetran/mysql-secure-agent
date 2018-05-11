@@ -10,6 +10,7 @@ import com.amazonaws.services.s3.model.Tag;
 import com.google.common.collect.ImmutableList;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,7 +36,7 @@ public class S3Client implements BucketClient {
     @Override
     public void copy(String subdirectory, File file) {
         List<Tag> dataFileTag = ImmutableList.of(new Tag("data_file", "true"));
-        String fullPath = prefix.orElse("") + (!subdirectory.isEmpty() ? subdirectory + "/" : "") + file.getName();
+        String fullPath = Paths.get(prefix.orElse(""),subdirectory, file.getName()).toString();
 
         PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, fullPath, file);
 
