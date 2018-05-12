@@ -133,7 +133,7 @@ public class BucketOutput implements Output {
         refreshFileChannel();
 
         Path statePath = Paths.get("mysql_state.json");
-        FileChannel stateFileChannel = FileChannel.open(statePath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        FileChannel stateFileChannel = FileChannel.open(statePath, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
         stateFileChannel.write(ByteBuffer.wrap(checkpointState.getBytes()));
         client.copy("resources", statePath.toFile());
         stateFileChannel.close();
