@@ -11,13 +11,17 @@ import com.fivetran.agent.mysql.source.Row;
 import com.fivetran.agent.mysql.source.TableRef;
 import com.fivetran.agent.mysql.state.AgentState;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
@@ -82,7 +86,10 @@ public class OutputSpec {
     public void writeOut_tableDefinitionEvent() throws IOException {
         TableRef tableRef = new TableRef("test_schema", "test_table");
         ImmutableList<ColumnDefinition> columnDefs = ImmutableList.of(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false));
-        TableDefinition tableDef = new TableDefinition(tableRef, columnDefs);
+        List<String> fromColumns = columnDefs.stream().map(c -> c.name).collect(Collectors.toList());
+        List<String> toColumns = ImmutableList.of("referenced_id", "referenced_data");
+        Map<TableRef, ForeignKey> foreignKeys = ImmutableMap.of(new TableRef("test_schema", "test_referenced_table"), new ForeignKey(fromColumns, toColumns));
+        TableDefinition tableDef = new TableDefinition(tableRef, columnDefs, foreignKeys);
 
         BucketOutput output = new BucketOutput(mockClient, 1);
         output.emitEvent(Event.createTableDefinition(tableDef), state);
@@ -99,6 +106,18 @@ public class OutputSpec {
         assertThat(columnsJson.get(1).get("name").asText(), equalTo("data"));
         assertThat(columnsJson.get(1).get("type").asText(), equalTo("text"));
         assertFalse(columnsJson.get(1).get("key").asBoolean());
+
+        ArrayNode fromColumnsJson = (ArrayNode) tableDefJson.get("foreignKeys").get("test_schema.test_referenced_table").get("columns");
+        assertThat(fromColumnsJson.size(), equalTo(2));
+        assertThat(fromColumnsJson.get(0).asText(), equalTo("id"));
+        assertThat(fromColumnsJson.get(1).asText(), equalTo("data"));
+
+        ArrayNode toColumnsJson = (ArrayNode) tableDefJson.get("foreignKeys").get("test_schema.test_referenced_table").get("referencedColumns");
+        assertThat(toColumnsJson.size(), equalTo(2));
+        assertThat(toColumnsJson.get(0).asText(), equalTo("referenced_id"));
+        assertThat(toColumnsJson.get(1).asText(), equalTo("referenced_data"));
+
+
     }
 
     @Test

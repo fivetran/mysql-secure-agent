@@ -19,6 +19,7 @@ public class ForeignKey {
     }
 
     public ForeignKey(List<String> columns, List<String> referencedColumns) {
+        assert columns.size() == referencedColumns.size();
         this.columns = columns;
         this.referencedColumns = referencedColumns;
     }
