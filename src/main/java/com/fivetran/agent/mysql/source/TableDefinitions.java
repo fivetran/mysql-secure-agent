@@ -41,7 +41,6 @@ public class TableDefinitions implements Supplier<Map<TableRef, TableDefinition>
             // we can just grab the first, since all we care about is name, type, and key, and those will never differ if there are multiple columns
             ColumnDefinition columnDef = new ColumnDefinition(columnRef.columnName, columnAttributes.get(0).columnType, columnAttributes.get(0).primaryKey);
 
-            // TODO think about whether we'll need foreign keys - if so, this return has to go
             if (tableDefinition.columns.contains(columnDef))
                 return;
             tableDefinition.columns.add(columnDef);
