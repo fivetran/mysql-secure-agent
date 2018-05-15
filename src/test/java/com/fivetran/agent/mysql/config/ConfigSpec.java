@@ -146,6 +146,29 @@ public class ConfigSpec {
     }
 
     @Test
+    public void getTablesToSync_ignoreNewSchemas() {
+        Config config = new Config();
+        config.selectOtherSchemas = false;
+
+        TableRef tableInSelectedSchema = new TableRef("selected_schema", "test_table");
+        TableRef tableInIgnoredSchema = new TableRef("ignored_schema", "test_table");
+
+        SchemaConfig schemaConfig = new SchemaConfig();
+        schemaConfig.selectOtherTables = true;
+        config.schemas.put("selected_schema", schemaConfig);
+
+        Map<TableRef, TableDefinition> tableDefinitions = new HashMap<>();
+        tableDefinitions.put(tableInIgnoredSchema, new TableDefinition(tableInIgnoredSchema, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false))));
+        tableDefinitions.put(tableInSelectedSchema, new TableDefinition(tableInSelectedSchema, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false))));
+
+
+        Map<TableRef, TableDefinition>  tablesToSync = config.getTablesToSync(tableDefinitions);
+
+        assertEquals(tablesToSync.size(), 1);
+        assertNotNull(tablesToSync.get(tableInSelectedSchema));
+    }
+
+    @Test
     public void getColumnsToSync_ignoreUnselectedColumn() {
         TableRef tableRef = new TableRef("test_schema", "test_table");
 

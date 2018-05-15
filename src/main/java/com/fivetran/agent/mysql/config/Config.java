@@ -1,6 +1,6 @@
 /**
-* Copyright (c) Fivetran 2018
-**/
+ * Copyright (c) Fivetran 2018
+ **/
 package com.fivetran.agent.mysql.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -64,22 +64,28 @@ public class Config {
         return columns;
     }
 
-    public  Map<TableRef, TableDefinition>getTablesToSync(Map<TableRef, TableDefinition> tableDefinitions) {
+    public Map<TableRef, TableDefinition> getTablesToSync(Map<TableRef, TableDefinition> tableDefinitions) {
         Map<TableRef, TableDefinition> tablesToSync = new HashMap<>();
+
         for (TableDefinition tableDef : tableDefinitions.values()) {
-            SchemaConfig schemaConfig = getSchema(tableDef.table.schemaName).orElse(new SchemaConfig());
-            Optional<TableConfig> tableConfig = getTable(tableDef.table);
-            if (ignorable(schemaConfig, tableConfig)) {
-                continue;
-            }
-            tablesToSync.put(tableDef.table, tableDef);
+            if (selectable(tableDef.table))
+                tablesToSync.put(tableDef.table, tableDef);
         }
         return tablesToSync;
     }
 
-    public static boolean ignorable(SchemaConfig schemaConfig, Optional<TableConfig> tableConfig) {
-        return (tableConfig.isPresent() && !tableConfig.get().selected)
-                || (!tableConfig.isPresent() && !schemaConfig.selectOtherTables);
+    // TODO review carefully
+    public boolean selectable(TableRef tableRef) {
+        Optional<SchemaConfig> maybeSchemaConfig = getSchema(tableRef.schemaName);
+        Optional<TableConfig> maybeTableConfig = getTable(tableRef);
+
+        if (maybeSchemaConfig.map(schemaConfig -> !schemaConfig.selected).orElse(!selectOtherSchemas))
+            return false;
+
+        return maybeTableConfig
+                .map(tableConfig -> tableConfig.selected)
+                .orElseGet(() -> maybeSchemaConfig.orElse(new SchemaConfig()).selectOtherTables);
+
     }
 
     @Override

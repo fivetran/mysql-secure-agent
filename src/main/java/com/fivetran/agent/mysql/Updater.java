@@ -5,7 +5,6 @@ package com.fivetran.agent.mysql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fivetran.agent.mysql.config.Config;
-import com.fivetran.agent.mysql.config.SchemaConfig;
 import com.fivetran.agent.mysql.config.TableConfig;
 import com.fivetran.agent.mysql.hash.Hash;
 import com.fivetran.agent.mysql.log.BeginSelectPage;
@@ -160,13 +159,7 @@ public class Updater {
                 SourceEvent sourceEvent = eventReader.readEvent();
                 state.binlogPosition = sourceEvent.binlogPosition;
 
-                if (ignorable(sourceEvent)) {
-                    out.emitEvent(Event.createNop(), state);
-
-                    if (sourceEvent.event == SourceEventType.TIMEOUT && state.tables.values().stream().anyMatch(tableState -> !tableState.finishedImport))
-                        return;
-                } else {
-
+                if (desirable(sourceEvent)) {
                     if (!state.tables.containsKey(sourceEvent.tableRef)) {
                         updateTableDefinitions();
                         return;
@@ -186,6 +179,12 @@ public class Updater {
                         default:
                             throw new RuntimeException("Unexpected case: " + sourceEvent.event);
                     }
+
+                } else {
+                    out.emitEvent(Event.createNop(), state);
+
+                    if (sourceEvent.event == SourceEventType.TIMEOUT && state.tables.values().stream().anyMatch(tableState -> !tableState.finishedImport))
+                        return;
                 }
 
                 if (target != null && sourceEvent.binlogPosition.equals(target))
@@ -194,19 +193,12 @@ public class Updater {
         }
     }
 
-    // TODO what about selectOtherSchemas?
-    private boolean ignorable(SourceEvent sourceEvent) {
-        if (sourceEvent.event == SourceEventType.TIMEOUT || sourceEvent.event == SourceEventType.OTHER)
-            return true;
+    // TODO review this carefully.
+    private boolean desirable(SourceEvent sourceEvent) {
+        return sourceEvent.event != SourceEventType.TIMEOUT
+                && sourceEvent.event != SourceEventType.OTHER
+                && config.selectable(sourceEvent.tableRef);
 
-        SchemaConfig schemaConfig = config.schemas.get(sourceEvent.tableRef.schemaName);
-
-        if (schemaConfig == null || !schemaConfig.selected)
-            return true;
-
-        Optional<TableConfig> tableConfig = Optional.ofNullable(schemaConfig.tables.get(sourceEvent.tableRef.tableName));
-
-        return Config.ignorable(schemaConfig, tableConfig);
     }
 
     private void emitFromInsert(SourceEvent event) {
