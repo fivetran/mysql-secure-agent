@@ -26,8 +26,8 @@ public class TableDefinitions implements Supplier<Map<TableRef, TableDefinition>
         Map<ColumnRef, List<ColumnAttributes>> allColumnAttributes = queryAllColumnAttributes(query);
         allColumnAttributes.forEach((columnRef, columnAttributes) -> {
             TableRef tableRef = columnRef.table;
-            tables.putIfAbsent(tableRef, new TableDefinition(tableRef, new ArrayList<>(), new HashMap<>()));
-            TableDefinition tableDefinition = tables.get(tableRef);
+            tables.putIfAbsent(tableRef, new TableDefinition(tableRef));
+            TableDefinition tableDefinition = tables.computeIfAbsent(tableRef, TableDefinition::new);
 
             for (ColumnAttributes attributes : columnAttributes) {
                 attributes.referencedColumn.ifPresent(referencedColumn -> {

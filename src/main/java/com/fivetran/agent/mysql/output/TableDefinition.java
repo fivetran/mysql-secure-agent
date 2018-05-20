@@ -6,9 +6,7 @@ package com.fivetran.agent.mysql.output;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fivetran.agent.mysql.source.TableRef;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class TableDefinition {
     @JsonProperty("table")
@@ -20,7 +18,7 @@ public class TableDefinition {
      * all of the foreign keys present on this table. The TableRef key represents
      * the table that is pointed to by the ForeignKey value.
      */
-    public Map<TableRef, ForeignKey> foreignKeys;
+    public final Map<TableRef, ForeignKey> foreignKeys;
 
     public TableDefinition(TableRef table, List<ColumnDefinition> columns, Map<TableRef, ForeignKey> foreignKeys) {
         this.table = table;
@@ -31,6 +29,13 @@ public class TableDefinition {
     public TableDefinition(TableRef table, List<ColumnDefinition> columns) {
         this.table = table;
         this.columns = columns;
+        this.foreignKeys = new HashMap<>();
+    }
+
+    public TableDefinition(TableRef table) {
+        this.table = table;
+        this.columns = new ArrayList<>();
+        this.foreignKeys = new HashMap<>();
     }
 
     @Override

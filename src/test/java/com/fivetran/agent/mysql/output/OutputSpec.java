@@ -40,7 +40,8 @@ public class OutputSpec {
                 in.read(bytes);
 
                 mockOutputFiles.compute(file, (key, value) -> (value == null ? "" : value + "\n") + new String(bytes));
-                // Sleep so we don't write to the same file on very quick tests
+                // Files are named using epoch-second timestamps. We must sleep
+                // so we don't write to the same file on very quick tests
                 Thread.sleep(1000);
             } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
