@@ -4,6 +4,7 @@
 package com.fivetran.agent.mysql.source;
 
 import com.fivetran.agent.mysql.output.ColumnDefinition;
+import com.fivetran.agent.mysql.output.ForeignKey;
 import com.fivetran.agent.mysql.output.TableDefinition;
 import com.google.common.collect.ImmutableList;
 
@@ -25,11 +26,21 @@ public class TableDefinitions implements Supplier<Map<TableRef, TableDefinition>
         Map<ColumnRef, List<ColumnAttributes>> allColumnAttributes = queryAllColumnAttributes(query);
         allColumnAttributes.forEach((columnRef, columnAttributes) -> {
             TableRef tableRef = columnRef.table;
-            tables.putIfAbsent(tableRef, new TableDefinition(tableRef, new ArrayList<>()));
+            tables.putIfAbsent(tableRef, new TableDefinition(tableRef, new ArrayList<>(), new HashMap<>()));
             TableDefinition tableDefinition = tables.get(tableRef);
+
+            for (ColumnAttributes attributes : columnAttributes) {
+                attributes.referencedColumn.ifPresent(referencedColumn -> {
+                    ForeignKey fKey = tableDefinition.foreignKeys.getOrDefault(referencedColumn.table, new ForeignKey());
+                    fKey.columns.add(columnRef.columnName);
+                    fKey.referencedColumns.add(referencedColumn.columnName);
+                    tableDefinition.foreignKeys.put(referencedColumn.table, fKey);
+                });
+            }
+
             // we can just grab the first, since all we care about is name, type, and key, and those will never differ if there are multiple columns
             ColumnDefinition columnDef = new ColumnDefinition(columnRef.columnName, columnAttributes.get(0).columnType, columnAttributes.get(0).primaryKey);
-            // TODO think about whether we'll need foreign keys - if so, this return has to go
+
             if (tableDefinition.columns.contains(columnDef))
                 return;
             tableDefinition.columns.add(columnDef);
@@ -81,7 +92,6 @@ public class TableDefinitions implements Supplier<Map<TableRef, TableDefinition>
         List<Record> records = query.records(selectTableColumnAttributes);
 
         Map<ColumnRef, List<ColumnAttributes>> allColumnAttributes = new HashMap<>();
-        ColumnRef prevColumn = null;
         for (Record record : records) {
 
             ColumnRef column = new ColumnRef(
