@@ -28,6 +28,7 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+// TODO add test to check contents of state file
 public class OutputSpec {
     private Map<File, String> mockOutputFiles = new HashMap<>();
 //    private final int MAX_SIZE = 1024;
