@@ -1,6 +1,6 @@
 /**
-* Copyright (c) Fivetran 2018
-**/
+ * Copyright (c) Fivetran 2018
+ **/
 package com.fivetran.agent.mysql.output;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -10,6 +10,7 @@ import com.fivetran.agent.mysql.source.BinlogPosition;
 import com.fivetran.agent.mysql.source.Row;
 import com.fivetran.agent.mysql.source.TableRef;
 import com.fivetran.agent.mysql.state.AgentState;
+import com.fivetran.agent.mysql.state.TableState;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.junit.Test;
@@ -21,16 +22,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
+import static com.fivetran.agent.mysql.output.BucketOutput.DATA_FILE_PREFIX;
+import static com.fivetran.agent.mysql.output.BucketOutput.STATE_FILE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+// TODO add test to check contents of state file
 public class OutputSpec {
     private Map<File, String> mockOutputFiles = new HashMap<>();
-//    private final int MAX_SIZE = 1024;
+    //    private final int MAX_SIZE = 1024;
     private BucketClient mockClient = new BucketClient() {
         @Override
         public void copy(String prefix, File file) {
@@ -49,6 +52,7 @@ public class OutputSpec {
         }
     };
     private AgentState state = new AgentState();
+
     {
         state.binlogPosition = new BinlogPosition();
     }
@@ -157,11 +161,35 @@ public class OutputSpec {
         assertFalse(mockOutputFiles.isEmpty());
     }
 
+    @Test
+    public void writeOut_state() throws IOException {
+        BucketOutput output = new BucketOutput(mockClient, 1);
+        TableRef tableRef = new TableRef("test_schema", "test_table");
+
+        TableState tableState = new TableState();
+        tableState.finishedImport = true;
+        state.tables.put(tableRef, new TableState());
+        state.binlogPosition = new BinlogPosition("mysql-bin.000001", 154);
+
+        output.emitEvent(Event.createUpsert(tableRef, new Row()), state);
+        AgentState outputtedState = Main.JSON.readValue(getStateFile(), AgentState.class);
+
+        assertTrue(outputtedState.equals(state));
+    }
+
     private String getDataFile() {
-        for (File f : mockOutputFiles.keySet()) {
-            if (f.getPath().contains("mysql_data"))
-                return mockOutputFiles.get(f);
-        }
-        throw new RuntimeException("No data file");
+        return mockOutputFiles.keySet().stream()
+                .filter(file -> file.getPath().startsWith(DATA_FILE_PREFIX))
+                .map(f -> mockOutputFiles.get(f))
+                .findFirst()
+                .orElseThrow(RuntimeException::new);
+    }
+
+    private String getStateFile() {
+        return mockOutputFiles.keySet().stream()
+                .filter(file -> file.getPath().equals(STATE_FILE))
+                .map(f -> mockOutputFiles.get(f))
+                .findFirst()
+                .orElseThrow(RuntimeException::new);
     }
 }

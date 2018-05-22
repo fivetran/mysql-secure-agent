@@ -26,13 +26,19 @@ import static com.fivetran.agent.mysql.Main.JSON;
 import static com.fivetran.agent.mysql.Main.LOG;
 
 public class BucketOutput implements Output {
+
+    private static final String RESOURCES_DIRECTORY = "resources";
+    private static final String DATA_DIRECTORY = "data";
+    static final String STATE_FILE = "mysql_state.json";
+    static final String DATA_FILE_PREFIX = "mysql_data_";
+    private static final String DATA_FILE_EXTENSION = ".json";
     private static final Duration AUTO_WRITE_INTERVAL = Duration.ofMinutes(15);
     private static final int MAX_OUTPUT_SIZE = 1024 * 1024 * 1024;
     private final int AUTO_WRITE_SIZE_LIMIT;
     private final Map<TableRef, TableDefinition> tableDefinitions = new HashMap<>();
     private final BucketClient client;
     private Instant startTime;
-    private FileChannel fileChannel;
+    private FileChannel dataFileChannel;
     private Path path;
     private String checkpointState;
 
@@ -87,7 +93,7 @@ public class BucketOutput implements Output {
 
     private void writeToBuffer(Event event) throws IOException {
         String rowAsString = getRowAsString(event);
-        fileChannel.write(ByteBuffer.wrap(rowAsString.getBytes()));
+        dataFileChannel.write(ByteBuffer.wrap(rowAsString.getBytes()));
     }
 
     private String getRowAsString(Event event) throws JsonProcessingException {
@@ -116,8 +122,8 @@ public class BucketOutput implements Output {
             checkpointState = Serialize.state(state);
 
             Duration timeSinceWrite = Duration.between(startTime, Instant.now());
-            if ((timeSinceWrite.compareTo(AUTO_WRITE_INTERVAL) > 0 && fileChannel.size() > 0)
-                    || fileChannel.size() > AUTO_WRITE_SIZE_LIMIT) {
+            if ((timeSinceWrite.compareTo(AUTO_WRITE_INTERVAL) > 0 && dataFileChannel.size() > 0)
+                    || dataFileChannel.size() > AUTO_WRITE_SIZE_LIMIT) {
                 flushToBucket();
             }
         } catch (IOException e) {
@@ -128,21 +134,21 @@ public class BucketOutput implements Output {
     }
 
     private void flushToBucket() throws IOException {
-        client.copy("data", path.toFile());
-        fileChannel.close();
+        client.copy(DATA_DIRECTORY, path.toFile());
+        dataFileChannel.close();
         refreshFileChannel();
 
-        Path statePath = Paths.get("mysql_state.json");
-        FileChannel stateFileChannel = FileChannel.open(statePath, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
+        Path statePath = Paths.get(STATE_FILE);
+        FileChannel stateFileChannel = FileChannel.open(statePath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
         stateFileChannel.write(ByteBuffer.wrap(checkpointState.getBytes()));
-        client.copy("resources", statePath.toFile());
+        client.copy(RESOURCES_DIRECTORY, statePath.toFile());
         stateFileChannel.close();
     }
 
     private void refreshFileChannel() {
-        path = Paths.get("mysql_data_" + Instant.now().getEpochSecond() + ".json");
+        path = Paths.get(DATA_FILE_PREFIX + Instant.now().getEpochSecond() + DATA_FILE_EXTENSION);
         try {
-            fileChannel = FileChannel.open(path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+            dataFileChannel = FileChannel.open(path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -153,7 +159,7 @@ public class BucketOutput implements Output {
     public void close() {
         try {
             flushToBucket();
-            fileChannel.close();
+            dataFileChannel.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
