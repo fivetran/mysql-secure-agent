@@ -26,11 +26,11 @@ public class ConfigSpec {
     public void configSerialization() throws JsonProcessingException {
         Config config = new Config();
         TableRef tableRef = new TableRef("test_config_schema", "test_config_table");
-        config.schemas.put(tableRef.schemaName, new SchemaConfig());
-        config.schemas.get(tableRef.schemaName).tables.put(tableRef.tableName, new TableConfig());
-        config.schemas.get(tableRef.schemaName).tables.get(tableRef.tableName).columns.put("test_config_column", new ColumnConfig());
-        config.schemas.get(tableRef.schemaName).tables.get(tableRef.tableName).columns.put("unsynced_config_column", new ColumnConfig());
-        config.schemas.get(tableRef.schemaName).tables.get(tableRef.tableName).columns.get("unsynced_config_column").selected = false;
+        config.schemas.put(tableRef.schema, new SchemaConfig());
+        config.schemas.get(tableRef.schema).tables.put(tableRef.name, new TableConfig());
+        config.schemas.get(tableRef.schema).tables.get(tableRef.name).columns.put("test_config_column", new ColumnConfig());
+        config.schemas.get(tableRef.schema).tables.get(tableRef.name).columns.put("unsynced_config_column", new ColumnConfig());
+        config.schemas.get(tableRef.schema).tables.get(tableRef.name).columns.get("unsynced_config_column").selected = false;
 
         String configSerialized = Updater.JSON.writerWithDefaultPrettyPrinter().writeValueAsString(config);
 
@@ -86,7 +86,7 @@ public class ConfigSpec {
 
         TableConfig tableConfig = new TableConfig();
         tableConfig.selected = true;
-        config.getSchema(syncedTable.schemaName).get().tables.put(syncedTable.tableName, tableConfig);
+        config.getSchema(syncedTable.schema).get().tables.put(syncedTable.name, tableConfig);
         Map<TableRef, TableDefinition> tableDefinitions = new HashMap<>();
         tableDefinitions.put(syncedTable, new TableDefinition(syncedTable, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false))));
         tableDefinitions.put(ignoredTable, new TableDefinition(ignoredTable, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false))));
@@ -110,7 +110,7 @@ public class ConfigSpec {
 
         TableConfig tableConfig = new TableConfig();
         tableConfig.selected = true;
-        config.getSchema(explicitlySelectedTable.schemaName).get().tables.put(explicitlySelectedTable.tableName, tableConfig);
+        config.getSchema(explicitlySelectedTable.schema).get().tables.put(explicitlySelectedTable.name, tableConfig);
         Map<TableRef, TableDefinition> tableDefinitions = new HashMap<>();
         tableDefinitions.put(explicitlySelectedTable, new TableDefinition(explicitlySelectedTable, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false))));
         tableDefinitions.put(implicitlySelectedTable, new TableDefinition(implicitlySelectedTable, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false))));
@@ -188,8 +188,8 @@ public class ConfigSpec {
         TableRef tableRef = new TableRef("test_schema", "test_table");
 
         Config config = new Config();
-        config.schemas.put(tableRef.schemaName, new SchemaConfig());
-        config.schemas.get(tableRef.schemaName).tables.put(tableRef.tableName, new TableConfig(true, false));
+        config.schemas.put(tableRef.schema, new SchemaConfig());
+        config.schemas.get(tableRef.schema).tables.put(tableRef.name, new TableConfig(true, false));
         config.putColumn(config, tableRef, "selected_column", true, false);
 
         TableDefinition tableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("selected_column", "text", true), new ColumnDefinition("unselected_column", "text", false)));

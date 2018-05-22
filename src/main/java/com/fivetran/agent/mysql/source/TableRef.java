@@ -5,11 +5,11 @@ package com.fivetran.agent.mysql.source;
 
 //@JsonDeserialize(using = TableRefDeserializer.class, as = )
 public class TableRef {
-    public final String schemaName, tableName;
+    public final String schema, name;
 
     public TableRef(String schemaName, String tableName) {
-        this.schemaName = schemaName;
-        this.tableName = tableName;
+        this.schema = schemaName;
+        this.name = tableName;
     }
 
     @Override
@@ -19,19 +19,19 @@ public class TableRef {
 
         TableRef tableRef = (TableRef) o;
 
-        return schemaName.equals(tableRef.schemaName) && tableName.equals(tableRef.tableName);
+        return schema.equals(tableRef.schema) && name.equals(tableRef.name);
     }
 
     @Override
     public int hashCode() {
-        int result = schemaName.hashCode();
-        result = 31 * result + tableName.hashCode();
+        int result = schema.hashCode();
+        result = 31 * result + name.hashCode();
         return result;
     }
 
     @Override
     public String toString() {
-        return escapePeriods(schemaName) + '.' + escapePeriods(tableName);
+        return escapePeriods(schema) + '.' + escapePeriods(name);
     }
 
     String escapePeriods(String name) {

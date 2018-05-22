@@ -46,13 +46,13 @@ public class BeginSelectPage implements LogMessage {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         BeginSelectPage that = (BeginSelectPage) o;
-        return Objects.equals(table.schemaName, that.table.schemaName) &&
-                Objects.equals(table.tableName, that.table.tableName) &&
+        return Objects.equals(table.schema, that.table.schema) &&
+                Objects.equals(table.name, that.table.name) &&
                 Objects.equals(fromKey, that.fromKey);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(table.schemaName, table, fromKey);
+        return Objects.hash(table.schema, table, fromKey);
     }
 }

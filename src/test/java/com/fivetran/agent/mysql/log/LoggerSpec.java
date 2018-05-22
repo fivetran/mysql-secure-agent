@@ -35,8 +35,8 @@ public class LoggerSpec {
 
         JsonNode details = topLevel.get("details");
         assertThat(details.get("fromKey").get(0).asText(), equalTo("123"));
-        assertThat(details.get("table").get("schemaName").asText(), equalTo("test_schema"));
-        assertThat(details.get("table").get("tableName").asText(), equalTo("test_table"));
+        assertThat(details.get("table").get("schema").asText(), equalTo("test_schema"));
+        assertThat(details.get("table").get("name").asText(), equalTo("test_table"));
 
         assertThat(logMessages.size(), equalTo(1));
     }
