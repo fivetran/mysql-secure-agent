@@ -52,10 +52,10 @@ public class BinlogParserSpec {
         EventHeader eventHeader = headerParser.parse(header);
         // assertThat(eventHeader.getTimestamp(), equalTo(calculate value)); // todo: manually calculate values
         assertThat(eventHeader.getType(), equalTo(EXT_WRITE_ROWS));
-        assertThat(eventHeader.getServerId(), equalTo(1L));
+        assertThat(eventHeader.getServerId(), equalTo(1));
         // assertThat(eventHeader.getEventLength(), equalTo(calculate value));
         // assertThat(eventHeader.getBodyLength(), equalTo(caluclate value));
-        assertThat(eventHeader.getHeaderLength(), equalTo(19L));
+        assertThat(eventHeader.getHeaderLength(), equalTo(19));
         // assertThat(eventHeader.getNextPosition(), equalTo(calculate value));
         assertThat(eventHeader.getFlags(), equalTo(0));
     }
