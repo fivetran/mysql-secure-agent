@@ -4,6 +4,7 @@
 package com.fivetran.agent.mysql;
 
 import com.fivetran.agent.mysql.config.Config;
+import com.fivetran.agent.mysql.source.BinlogPosition;
 import com.fivetran.agent.mysql.source.TableRef;
 import com.fivetran.agent.mysql.state.AgentState;
 
@@ -26,10 +27,14 @@ public class BatchUpdater extends Updater {
     void sync() throws Exception {
         TableRef tableToImport = findTableToImport();
 
+        // Record binlog position prior to beginning sync, to guarantee we capture every event that's occurred
+        // since the beginning of the sync
+        BinlogPosition target = mysql.readSourceLog.currentPosition();
+
         if (tableToImport != null)
             syncPageFromTable(tablesToSync.get(tableToImport));
 
-        syncFromBinlog(mysql.readSourceLog.currentPosition());
+        syncFromBinlog(target);
     }
 
     private boolean finishedImport() {
