@@ -4,26 +4,21 @@
 package com.fivetran.agent.mysql.output;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fivetran.agent.mysql.deserialize.TableRefAsKeyDeserializer;
-import com.fivetran.agent.mysql.deserialize.TableRefDeserializer;
 import com.fivetran.agent.mysql.source.TableRef;
 
 import java.util.*;
 
 public class TableDefinition {
-    @JsonDeserialize(using = TableRefDeserializer.class)
-//    @JsonSerialize(using = TableRefSerializer.class)
-    public TableRef table;
+    @JsonProperty("table")
+    public final TableRef table;
     @JsonProperty("tableDefinition")
-    public List<ColumnDefinition> columns;
+    public final List<ColumnDefinition> columns;
 
     /** Multiple foreign keys can exist on a table in MySQL. This set represents
      * all of the foreign keys present on this table. The TableRef key represents
      * the table that is pointed to by the ForeignKey value.
      */
-    @JsonDeserialize(keyUsing = TableRefAsKeyDeserializer.class)
-    public Map<TableRef, ForeignKey> foreignKeys;
+    public final Map<TableRef, ForeignKey> foreignKeys;
 
     public TableDefinition(TableRef table, List<ColumnDefinition> columns, Map<TableRef, ForeignKey> foreignKeys) {
         this.table = table;
@@ -42,9 +37,6 @@ public class TableDefinition {
         this.columns = new ArrayList<>();
         this.foreignKeys = new HashMap<>();
     }
-
-    // Jackson only!
-    public TableDefinition() {}
 
     @Override
     public boolean equals(Object o) {

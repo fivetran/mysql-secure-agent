@@ -4,11 +4,11 @@
 package com.fivetran.agent.mysql.output;
 
 public class ColumnDefinition {
-    public String name;
+    public final String name;
     /** The type of the column, as reported by MySQL */
-    public String type;
+    public final String type;
     /** The primary key, or the first unique index if the primary key is not present */
-    public boolean key;
+    public final boolean key;
     // TODO consider putting in sort and dist keys in later versions of agent
 
     // TODO Ordinal position, character encoding, and set and enum values are necessary for binlog decoding, but not for output
@@ -29,9 +29,6 @@ public class ColumnDefinition {
         this.type = type;
         this.key = key;
     }
-
-    // Jackson only!
-    public ColumnDefinition() {}
 
     @Override
     public boolean equals(Object o) {

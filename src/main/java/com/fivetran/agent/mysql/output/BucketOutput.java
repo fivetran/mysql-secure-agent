@@ -119,7 +119,7 @@ public class BucketOutput implements Output {
 
     private void checkpoint(AgentState state) {
         try {
-            checkpointState = Serialize.value(state);
+            checkpointState = Serialize.state(state);
 
             Duration timeSinceWrite = Duration.between(startTime, Instant.now());
             if ((timeSinceWrite.compareTo(AUTO_WRITE_INTERVAL) > 0 && dataFileChannel.size() > 0)
