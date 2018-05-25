@@ -4,6 +4,8 @@
 package com.fivetran.agent.mysql;
 
 import com.fivetran.agent.mysql.config.Config;
+import com.fivetran.agent.mysql.output.Event;
+import com.fivetran.agent.mysql.output.TableDefinition;
 import com.fivetran.agent.mysql.source.BinlogPosition;
 import com.fivetran.agent.mysql.source.TableRef;
 import com.fivetran.agent.mysql.state.AgentState;
@@ -37,7 +39,15 @@ public class BatchUpdater extends Updater {
         syncFromBinlog(target);
     }
 
-    private boolean finishedImport() {
+    @Override
+    void updateTableDefinitions() {
+        super.updateTableDefinitions();
+
+        for (TableDefinition td : tablesToSync.values())
+            out.emitEvent(Event.createTableDefinition(td), state);
+    }
+
+        private boolean finishedImport() {
         return state.tables.values().stream().allMatch(tableState -> tableState.finishedImport);
     }
 }

@@ -109,7 +109,7 @@ public class BatchUpdaterSpec {
 
         new BatchUpdater(config, api, out, logMessages::add, state).update();
 
-        assertEquals(outEvents.size(), 4);
+        assertEquals(outEvents.size(), 5);
         assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
         assertTrue(outEvents.contains(Event.createUpsert(selectedTable, row1)));
         assertTrue(outEvents.contains(Event.createUpsert(selectedTable, row2)));
