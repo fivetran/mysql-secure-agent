@@ -4,7 +4,7 @@
 package com.fivetran.agent.mysql.state;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fivetran.agent.mysql.deserialize.TableRefDeserializer;
+import com.fivetran.agent.mysql.deserialize.TableRefAsKeyDeserializer;
 import com.fivetran.agent.mysql.source.BinlogPosition;
 import com.fivetran.agent.mysql.source.TableRef;
 
@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class AgentState {
     public BinlogPosition binlogPosition;
-    @JsonDeserialize(keyUsing = TableRefDeserializer.class)
+    @JsonDeserialize(keyUsing = TableRefAsKeyDeserializer.class)
     public final Map<TableRef, TableState> tables = new HashMap<>();
 
     @Override

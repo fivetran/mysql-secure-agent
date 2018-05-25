@@ -238,6 +238,8 @@ public class Updater {
         tablesToSync = config.getTablesToSync(allSourceTables);
 
         updateState(tablesToSync.keySet());
+
+        Serialize.value(tablesToSync);
     }
 
     private List<String> hashedColumns(TableRef tableRef) {
