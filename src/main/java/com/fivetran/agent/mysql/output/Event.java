@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fivetran.agent.mysql.source.TableRef;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import static com.fivetran.agent.mysql.output.Event.EventType.*;
@@ -19,10 +20,9 @@ public class Event {
 
     public final Optional<Upsert> upsert;
     public final Optional<Delete> delete;
-    public final Optional<TableDefinition> tableDefinition;
 
     public enum EventType {
-        UPSERT, DELETE, TABLE_DEFINITION, NOP
+        UPSERT, DELETE, NOP
     }
 
     public static Event createNop() {
@@ -37,13 +37,8 @@ public class Event {
         return new Event(new Delete(tableRef, row));
     }
 
-    public static Event createTableDefinition(TableDefinition tableDefinition) {
-        return new Event(tableDefinition);
-    }
-
     private Event(Upsert upsert) {
         this.tableRef = upsert.table;
-        this.tableDefinition = Optional.empty();
         this.upsert = Optional.of(upsert);
         this.delete = Optional.empty();
         this.eventType = UPSERT;
@@ -51,23 +46,13 @@ public class Event {
 
     private Event(Delete delete) {
         this.tableRef = delete.table;
-        this.tableDefinition = Optional.empty();
         this.upsert = Optional.empty();
         this.delete = Optional.of(delete);
         this.eventType = DELETE;
     }
 
-    private Event(TableDefinition tableDefinition) {
-        this.tableRef = tableDefinition.table;
-        this.tableDefinition = Optional.of(tableDefinition);
-        this.upsert = Optional.empty();
-        this.delete = Optional.empty();
-        this.eventType = TABLE_DEFINITION;
-    }
-
     private Event() {
         this.tableRef = new TableRef("", "");
-        this.tableDefinition = Optional.empty();
         this.upsert = Optional.empty();
         this.delete = Optional.empty();
         this.eventType = NOP;
@@ -77,28 +62,25 @@ public class Event {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         Event event = (Event) o;
-
-        if (!upsert.equals(event.upsert)) return false;
-        if (!delete.equals(event.delete)) return false;
-        return tableDefinition.equals(event.tableDefinition);
+        return Objects.equals(tableRef, event.tableRef) &&
+                eventType == event.eventType &&
+                Objects.equals(upsert, event.upsert) &&
+                Objects.equals(delete, event.delete);
     }
 
     @Override
     public int hashCode() {
-        int result = upsert.hashCode();
-        result = 31 * result + delete.hashCode();
-        result = 31 * result + tableDefinition.hashCode();
-        return result;
+        return Objects.hash(tableRef, eventType, upsert, delete);
     }
 
     @Override
     public String toString() {
         return "Event{" +
-                "upsert=" + upsert +
+                "tableRef=" + tableRef +
+                ", eventType=" + eventType +
+                ", upsert=" + upsert +
                 ", delete=" + delete +
-                ", tableDefinition=" + tableDefinition +
                 '}';
     }
 }

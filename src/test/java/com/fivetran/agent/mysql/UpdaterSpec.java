@@ -45,7 +45,6 @@ public class UpdaterSpec {
     };
     private BinlogPosition binlogPosition;
     private Map<TableRef, TableDefinition> tableDefinitions = new HashMap<>();
-    private AgentState state = new AgentState();
     private ReadSourceLog read = new ReadSourceLog() {
         @Override
         public BinlogPosition currentPosition() {
@@ -91,7 +90,7 @@ public class UpdaterSpec {
     public void selectSync() {
         TableRef tableRef = new TableRef("test_schema", "sync_table");
         AgentState state = new AgentState();
-        state.tables.put(tableRef, new TableState());
+        state.tableStates.put(tableRef, new TableState());
 
         Updater updater = new Updater(config, api, out, logMessages::add, state);
 
@@ -102,9 +101,7 @@ public class UpdaterSpec {
         TableDefinition tableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
         tableDefinitions.put(tableRef, tableDef);
 
-        updater.syncPageFromTable(tableDef);
-
-        assertTrue(outEvents.contains(Event.createTableDefinition(tableDef)));
+        updater.syncPageFromTable(tableRef);
 
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, Arrays.asList("1", "foo-1"))));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, Arrays.asList("2", "foo-2"))));

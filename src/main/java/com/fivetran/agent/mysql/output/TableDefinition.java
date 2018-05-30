@@ -13,7 +13,6 @@ import java.util.*;
 
 public class TableDefinition {
     @JsonDeserialize(using = TableRefDeserializer.class)
-//    @JsonSerialize(using = TableRefSerializer.class)
     public TableRef table;
     @JsonProperty("tableDefinition")
     public List<ColumnDefinition> columns;

@@ -109,8 +109,7 @@ public class BatchUpdaterSpec {
 
         new BatchUpdater(config, api, out, logMessages::add, state).update();
 
-        assertEquals(outEvents.size(), 5);
-        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
+        assertEquals(outEvents.size(), 3);
         assertTrue(outEvents.contains(Event.createUpsert(selectedTable, row1)));
         assertTrue(outEvents.contains(Event.createUpsert(selectedTable, row2)));
         assertTrue(outEvents.contains(Event.createNop()));
@@ -133,8 +132,7 @@ public class BatchUpdaterSpec {
         BatchUpdater initialImport = new BatchUpdater(config, api, out, logMessages::add, state);
         initialImport.update();
 
-        assertThat(outEvents.size(), equalTo(4));
-        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
+        assertThat(outEvents.size(), equalTo(3));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row1)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row2)));
         assertTrue(outEvents.contains(Event.createNop()));
@@ -188,7 +186,7 @@ public class BatchUpdaterSpec {
         TableState tableState = new TableState();
 
         tableState.finishedImport = true;
-        state.tables.put(tableRef, tableState);
+        state.tableStates.put(tableRef, tableState);
         state.binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 1L);
 
         TableDefinition initialTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
@@ -211,8 +209,7 @@ public class BatchUpdaterSpec {
 
         new BatchUpdater(config, customApi, out, logMessages::add, state).update();
 
-        assertEquals(outEvents.size(), 4);
-        assertTrue(outEvents.contains(Event.createTableDefinition(updatedTableDef)));
+        assertEquals(outEvents.size(), 3);
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, standardRow)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, modifiedRow)));
         assertTrue(outEvents.contains(Event.createNop()));
@@ -229,7 +226,7 @@ public class BatchUpdaterSpec {
         TableState tableState = new TableState();
 
         tableState.finishedImport = true;
-        state.tables.put(tableRef, tableState);
+        state.tableStates.put(tableRef, tableState);
         state.binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 1L);
 
         tableDefinitions.clear();
@@ -297,12 +294,11 @@ public class BatchUpdaterSpec {
 
         new BatchUpdater(config, customApi, out, logMessages::add, state).update();
 
-        assertEquals(outEvents.size(), 7);
+        assertEquals(outEvents.size(), 6);
 
         // First binlog sync
         assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredTable
         assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredSchema
-        assertTrue(outEvents.contains(Event.createTableDefinition(tableDef)));  // insertSelectedTable
 
         // Second binlog sync
         assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredTable
@@ -321,7 +317,7 @@ public class BatchUpdaterSpec {
         TableState tableState = new TableState();
 
         tableState.lastSyncedPrimaryKey = Optional.of(Collections.singletonMap("id", "3"));
-        state.tables.put(tableRef, tableState);
+        state.tableStates.put(tableRef, tableState);
 
         tableDefinitions.clear();
         TableDefinition selectedTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));

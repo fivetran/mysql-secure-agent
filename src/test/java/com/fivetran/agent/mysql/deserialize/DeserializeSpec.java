@@ -70,9 +70,9 @@ public class DeserializeSpec {
                 "  }\n" +
                 "}";
         AgentState state = Deserialize.deserialize(new ByteArrayInputStream(stateJson.getBytes()), AgentState.class);
-        assertThat(state.tables.get(new TableRef("schema_one", "table_one")).finishedImport, equalTo(true));
-        assertThat(state.tables.get(new TableRef("schema_one", "table_one")).lastSyncedPrimaryKey.isPresent(), equalTo(true));
-        assertThat(state.tables.get(new TableRef("schema_one", "table_one")).lastSyncedPrimaryKey.get().get("table_pkey"), equalTo("pkey_value"));
+        assertThat(state.tableStates.get(new TableRef("schema_one", "table_one")).finishedImport, equalTo(true));
+        assertThat(state.tableStates.get(new TableRef("schema_one", "table_one")).lastSyncedPrimaryKey.isPresent(), equalTo(true));
+        assertThat(state.tableStates.get(new TableRef("schema_one", "table_one")).lastSyncedPrimaryKey.get().get("table_pkey"), equalTo("pkey_value"));
         assertThat(state.binlogPosition.file, equalTo("some_binlog_file"));
         assertThat(state.binlogPosition.position, equalTo(1234567890L));
     }

@@ -35,7 +35,6 @@ public class BucketOutput implements Output {
     private static final Duration AUTO_WRITE_INTERVAL = Duration.ofMinutes(15);
     private static final int MAX_OUTPUT_SIZE = 1024 * 1024 * 1024;
     private final int AUTO_WRITE_SIZE_LIMIT;
-    private final Map<TableRef, TableDefinition> tableDefinitions = new HashMap<>();
     private final BucketClient client;
     private Instant startTime;
     private FileChannel dataFileChannel;
@@ -62,9 +61,6 @@ public class BucketOutput implements Output {
                 case UPSERT:
                     writeToBuffer(event);
                     break;
-                case TABLE_DEFINITION:
-                    processTableDefinitionEvent(event);
-                    break;
                 case NOP:
                     break;
                 default:
@@ -76,18 +72,6 @@ public class BucketOutput implements Output {
             LogMessage message = new LogGeneralException(e);
             LOG.log(message);
             throw new RuntimeException(e);
-        }
-    }
-
-    private void processTableDefinitionEvent(Event event) throws IOException {
-        TableRef tableRef = event.tableRef;
-        TableDefinition cachedTableDefinition = tableDefinitions.get(tableRef);
-        TableDefinition eventTableDefinition = event.tableDefinition.orElseThrow(() ->
-                new RuntimeException("TableDefinition instance must be present in TableDefinition event"));
-
-        if (cachedTableDefinition == null || !cachedTableDefinition.equals(eventTableDefinition)) {
-            tableDefinitions.put(tableRef, eventTableDefinition);
-            writeToBuffer(event);
         }
     }
 
@@ -106,10 +90,6 @@ public class BucketOutput implements Output {
             case DELETE:
                 rowAsString = JSON.writeValueAsString(event.delete.orElseThrow(() ->
                         new RuntimeException("Delete object was not instantiated in Event class")));
-                break;
-            case TABLE_DEFINITION:
-                rowAsString = JSON.writeValueAsString(event.tableDefinition.orElseThrow(() ->
-                        new RuntimeException("TableDefinition object was not instantiated in Event class")));
                 break;
             default:
                 throw new RuntimeException("Row was not associated with any event type");
