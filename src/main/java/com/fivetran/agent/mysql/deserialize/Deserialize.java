@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fivetran.agent.mysql.config.Config;
 import com.fivetran.agent.mysql.credentials.Credentials;
+import com.fivetran.agent.mysql.output.TableDefinitions;
 import com.fivetran.agent.mysql.state.AgentState;
 
 import java.io.IOException;
@@ -28,6 +29,10 @@ public class Deserialize {
 
     public static Credentials credentials() {
         return deserialize(Deserialize.class.getResourceAsStream("/credentials.json"), Credentials.class);
+    }
+
+    public static TableDefinitions tableDefinitions() {
+        return deserialize(Deserialize.class.getResourceAsStream("/tableDefinitions.json"), TableDefinitions.class);
     }
 
     static <T> T deserialize(InputStream in, Class<T> type) {

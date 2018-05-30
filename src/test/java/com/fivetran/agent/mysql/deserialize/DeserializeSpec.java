@@ -1,13 +1,16 @@
 /**
-* Copyright (c) Fivetran 2018
-**/
+ * Copyright (c) Fivetran 2018
+ **/
 package com.fivetran.agent.mysql.deserialize;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fivetran.agent.mysql.config.ColumnConfig;
 import com.fivetran.agent.mysql.config.Config;
 import com.fivetran.agent.mysql.config.SchemaConfig;
 import com.fivetran.agent.mysql.config.TableConfig;
 import com.fivetran.agent.mysql.credentials.Credentials;
+import com.fivetran.agent.mysql.output.TableDefinition;
+import com.fivetran.agent.mysql.output.TableDefinitions;
 import com.fivetran.agent.mysql.source.TableRef;
 import com.fivetran.agent.mysql.state.AgentState;
 import org.junit.Test;
@@ -127,5 +130,63 @@ public class DeserializeSpec {
     public void deserializeEmptyConfig() {
         Config config = Deserialize.deserialize(new ByteArrayInputStream("".getBytes()), Config.class);
         assertThat(config, equalTo(new Config()));
+    }
+
+    @Test
+    public void deserializeTableDefinitions() throws JsonProcessingException {
+        String tableDefinitionsString = "{\n" +
+                "  \"tableDefinitions\": {\n" +
+                "    \"test_schema.test_table\": {\n" +
+                "      \"foreignKeys\": {\n" +
+                "        \"test_schema.referenced_table\": {\n" +
+                "          \"columns\": [\n" +
+                "            \"data\"\n" +
+                "          ],\n" +
+                "          \"referencedColumns\": [\n" +
+                "            \"referenced_column\"\n" +
+                "          ]\n" +
+                "        }\n" +
+                "      },\n" +
+                "      \"table\": \"test_schema.test_table\",\n" +
+                "      \"tableDefinition\": [\n" +
+                "        {\n" +
+                "          \"name\": \"id\",\n" +
+                "          \"type\": \"text\",\n" +
+                "          \"key\": true\n" +
+                "        },\n" +
+                "        {\n" +
+                "          \"name\": \"data\",\n" +
+                "          \"type\": \"text\",\n" +
+                "          \"key\": false\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  }\n" +
+                "}";
+
+        TableDefinitions tableDefinitions = Deserialize.deserialize(new ByteArrayInputStream(tableDefinitionsString.getBytes()), TableDefinitions.class);
+        TableDefinition tableDefinition = tableDefinitions.tableDefinitions.get(new TableRef("test_schema", "test_table"));
+
+        assertThat(tableDefinition.table, equalTo(new TableRef("test_schema", "test_table")));
+
+        assertThat(tableDefinition.foreignKeys.size(), equalTo(1));
+        assertThat(tableDefinition.foreignKeys.get(new TableRef("test_schema", "referenced_table")).columns.size(), equalTo(1));
+        assertThat(tableDefinition.foreignKeys.get(new TableRef("test_schema", "referenced_table")).columns.get(0), equalTo("data"));
+        assertThat(tableDefinition.foreignKeys.get(new TableRef("test_schema", "referenced_table")).referencedColumns.size(), equalTo(1));
+        assertThat(tableDefinition.foreignKeys.get(new TableRef("test_schema", "referenced_table")).referencedColumns.get(0), equalTo("referenced_column"));
+
+        assertThat(tableDefinition.columns.size(), equalTo(2));
+        assertThat(tableDefinition.columns.get(0).name, equalTo("id"));
+        assertThat(tableDefinition.columns.get(0).type, equalTo("text"));
+        assertThat(tableDefinition.columns.get(0).key, equalTo(true));
+        assertThat(tableDefinition.columns.get(1).name, equalTo("data"));
+        assertThat(tableDefinition.columns.get(1).type, equalTo("text"));
+        assertThat(tableDefinition.columns.get(1).key, equalTo(false));
+    }
+
+    @Test
+    public void deserializeEmptyTableDefinitions() {
+        TableDefinitions state = Deserialize.deserialize(new ByteArrayInputStream("".getBytes()), TableDefinitions.class);
+        assertThat(state, equalTo(new TableDefinitions()));
     }
 }
