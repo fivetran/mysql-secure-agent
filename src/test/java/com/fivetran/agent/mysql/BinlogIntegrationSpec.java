@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static junit.framework.TestCase.assertTrue;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -126,8 +127,8 @@ public class BinlogIntegrationSpec {
         List<SourceEvent> firstCall = getAllBinlogEvents(client, startPosition);
         List<SourceEvent> secondCall = getAllBinlogEvents(client, startPosition);
 
-        assertThat(firstCall.size(), equalTo(2273));
-        assertThat(secondCall.size(), equalTo(2273));
+        assertTrue(firstCall.size() > 0);
+        assertTrue(firstCall.size() == secondCall.size());
     }
 
     private List<SourceEvent> getAllBinlogEvents(BinlogClient client, BinlogPosition startPosition) throws Exception {
