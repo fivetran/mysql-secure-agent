@@ -31,10 +31,6 @@ public class Deserialize {
         return deserialize(Deserialize.class.getResourceAsStream("/credentials.json"), Credentials.class);
     }
 
-    public static TableDefinitions tableDefinitions() {
-        return deserialize(Deserialize.class.getResourceAsStream("/tableDefinitions.json"), TableDefinitions.class);
-    }
-
     static <T> T deserialize(InputStream in, Class<T> type) {
         try {
             if (in.available() == 0)
