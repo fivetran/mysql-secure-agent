@@ -192,8 +192,8 @@ public class TestEvent {
         appendTableMapBody(sb);
 
         sb.append("        assertThat(tableMapEventBody.getTableId(), equalTo(" + getTableId() + "L));\n");
-        sb.append("        assertThat(tableMapEventBody.getTableRef().schemaName, equalTo(\"capture_binlog_events\"));\n");
-        sb.append("        assertThat(tableMapEventBody.getTableRef().tableName, equalTo(\"foo\"));\n");
+        sb.append("        assertThat(tableMapEventBody.getTableRef().schema, equalTo(\"capture_binlog_events\"));\n");
+        sb.append("        assertThat(tableMapEventBody.getTableRef().name, equalTo(\"foo\"));\n");
         sb.append("        assertThat(tableMapEventBody.getColumnTypes(), equalTo(new byte[] {0})); // todo: add appropriate types\n");
         sb.append("    }\n");
         System.out.println(sb.toString());

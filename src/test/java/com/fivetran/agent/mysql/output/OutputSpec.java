@@ -101,8 +101,8 @@ public class OutputSpec {
         JsonNode tableDefJson = Main.JSON.readValue(getDataFile(), JsonNode.class);
 
         ArrayNode columnsJson = (ArrayNode) tableDefJson.get("tableDefinition");
-        assertThat(tableDefJson.get("table").get("schemaName").asText(), equalTo("test_schema"));
-        assertThat(tableDefJson.get("table").get("tableName").asText(), equalTo("test_table"));
+        assertThat(tableDefJson.get("table").get("schema").asText(), equalTo("test_schema"));
+        assertThat(tableDefJson.get("table").get("name").asText(), equalTo("test_table"));
 
         assertThat(columnsJson.get(0).get("name").asText(), equalTo("id"));
         assertThat(columnsJson.get(0).get("type").asText(), equalTo("text"));

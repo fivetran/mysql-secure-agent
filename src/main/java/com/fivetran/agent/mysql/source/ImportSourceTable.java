@@ -74,7 +74,7 @@ public class ImportSourceTable implements ImportTable {
     }
 
     private static String quoted(TableRef table) {
-        return quoted(table.schemaName) + '.' + quoted(table.tableName);
+        return quoted(table.schema) + '.' + quoted(table.name);
     }
 
     private static String quoted(List<String> columns) {

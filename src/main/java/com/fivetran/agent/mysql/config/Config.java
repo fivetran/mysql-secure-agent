@@ -22,23 +22,23 @@ public class Config {
 
     @JsonIgnore
     public Optional<TableConfig> getTable(TableRef tableRef) {
-        if (!schemas.containsKey(tableRef.schemaName) ||
-                !schemas.get(tableRef.schemaName).tables.containsKey(tableRef.tableName))
+        if (!schemas.containsKey(tableRef.schema) ||
+                !schemas.get(tableRef.schema).tables.containsKey(tableRef.name))
             return Optional.empty();
-        return Optional.of(schemas.get(tableRef.schemaName).tables.get(tableRef.tableName));
+        return Optional.of(schemas.get(tableRef.schema).tables.get(tableRef.name));
     }
 
     @JsonIgnore
     public Optional<ColumnConfig> getColumn(TableRef tableRef, String columnName) {
         if (!getTable(tableRef).isPresent())
             return Optional.empty();
-        return Optional.ofNullable(schemas.get(tableRef.schemaName).tables.get(tableRef.tableName).columns.get(columnName));
+        return Optional.ofNullable(schemas.get(tableRef.schema).tables.get(tableRef.name).columns.get(columnName));
     }
 
     public void putColumn(Config config, TableRef tableRef, String columnName, boolean selected, boolean hash) {
-        config.schemas.putIfAbsent(tableRef.schemaName, new SchemaConfig());
-        config.schemas.get(tableRef.schemaName).tables.putIfAbsent(tableRef.tableName, new TableConfig());
-        config.schemas.get(tableRef.schemaName).tables.get(tableRef.tableName).columns.putIfAbsent(columnName, new ColumnConfig(selected, hash, Optional.empty()));
+        config.schemas.putIfAbsent(tableRef.schema, new SchemaConfig());
+        config.schemas.get(tableRef.schema).tables.putIfAbsent(tableRef.name, new TableConfig());
+        config.schemas.get(tableRef.schema).tables.get(tableRef.name).columns.putIfAbsent(columnName, new ColumnConfig(selected, hash, Optional.empty()));
     }
 
     public List<ColumnDefinition> getColumnsToSync(TableDefinition tableDef) {
@@ -76,7 +76,7 @@ public class Config {
 
     // TODO review carefully
     public boolean selectable(TableRef tableRef) {
-        Optional<SchemaConfig> maybeSchemaConfig = getSchema(tableRef.schemaName);
+        Optional<SchemaConfig> maybeSchemaConfig = getSchema(tableRef.schema);
         Optional<TableConfig> maybeTableConfig = getTable(tableRef);
 
         if (maybeSchemaConfig.map(schemaConfig -> !schemaConfig.selected).orElse(!selectOtherSchemas))
