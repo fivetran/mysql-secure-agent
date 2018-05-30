@@ -62,29 +62,6 @@ public class BinlogClientSpec {
     }
 
     @Test
-    public void simultaneousCalls() throws Exception {
-        BinlogPosition startPosition = new BinlogPosition("mysql-bin.000008", 4L);
-
-        List<SourceEvent> firstCall = getAllBinlogEvents(startPosition);
-        List<SourceEvent> secondCall = getAllBinlogEvents(startPosition);
-
-        assertThat(firstCall.size(), equalTo(265));
-        assertThat(secondCall.size(), equalTo(265));
-    }
-
-    private List<SourceEvent> getAllBinlogEvents(BinlogPosition startPosition) throws Exception {
-        try (EventReader reader = client.events(startPosition)) {
-            List<SourceEvent> events = new ArrayList<>();
-            SourceEvent sourceEvent;
-
-            while ((sourceEvent = reader.readEvent()).event != SourceEventType.TIMEOUT) {
-                events.add(sourceEvent);
-            }
-            return events;
-        }
-    }
-
-    @Test
     public void update() throws Exception {
         BinlogPosition startingPosition = new BinlogPosition("mysql-bin.000008", 4L);
         List<SourceEvent> relevantEvents = new ArrayList<>();

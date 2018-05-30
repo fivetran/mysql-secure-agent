@@ -35,8 +35,8 @@ public class BinlogIntegrationSpec {
                 new DatabaseCredentials(
                         "localhost",
                         3306,
-                        "",
-                        ""
+                        "glarwood",
+                        "April!5!5"
                 );
 //                new DatabaseCredentials(
 //                        "",
@@ -80,7 +80,8 @@ public class BinlogIntegrationSpec {
         try (EventReader reader = client.events(startPosition)) {
             SourceEvent sourceEvent;
             while ((sourceEvent = reader.readEvent()).event != SourceEventType.TIMEOUT) {
-                sourceEvents.add(sourceEvent);
+                if (sourceEvent.event != SourceEventType.OTHER)
+                    sourceEvents.add(sourceEvent);
             }
         }
 
@@ -106,7 +107,8 @@ public class BinlogIntegrationSpec {
         try (EventReader reader = client.events(startPosition)) {
             SourceEvent sourceEvent;
             while ((sourceEvent = reader.readEvent()).event != SourceEventType.TIMEOUT) {
-                sourceEvents.add(sourceEvent);
+                if (sourceEvent.event != SourceEventType.OTHER)
+                    sourceEvents.add(sourceEvent);
             }
         }
 
@@ -114,6 +116,30 @@ public class BinlogIntegrationSpec {
         assertThat(sourceEvents.get(0).event, equalTo(SourceEventType.INSERT));
         assertThat(sourceEvents.get(1).event, equalTo(SourceEventType.INSERT));
         assertThat(sourceEvents.get(2).event, equalTo(SourceEventType.UPDATE));
+    }
+
+    @Test
+    public void simultaneousCalls() throws Exception {
+        BinlogClient client = new BinlogClient(creds);
+        BinlogPosition startPosition = new BinlogPosition("mysql-bin.000008", 4L);
+
+        List<SourceEvent> firstCall = getAllBinlogEvents(client, startPosition);
+        List<SourceEvent> secondCall = getAllBinlogEvents(client, startPosition);
+
+        assertThat(firstCall.size(), equalTo(2273));
+        assertThat(secondCall.size(), equalTo(2273));
+    }
+
+    private List<SourceEvent> getAllBinlogEvents(BinlogClient client, BinlogPosition startPosition) throws Exception {
+        try (EventReader reader = client.events(startPosition)) {
+            List<SourceEvent> events = new ArrayList<>();
+            SourceEvent sourceEvent;
+
+            while ((sourceEvent = reader.readEvent()).event != SourceEventType.TIMEOUT) {
+                events.add(sourceEvent);
+            }
+            return events;
+        }
     }
 
     private static void dropTable(String table) {
