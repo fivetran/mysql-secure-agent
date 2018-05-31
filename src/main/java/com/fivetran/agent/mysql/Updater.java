@@ -67,13 +67,13 @@ public class Updater {
     }
 
     void updateState() {
-        updateTableInfo();
+        updateStateTableInfo();
 
         if (state.binlogPosition == null)
             state.binlogPosition = mysql.readSourceLog.currentPosition();
     }
 
-    private void updateTableInfo() {
+    private void updateStateTableInfo() {
         Map<TableRef, TableDefinition> allSourceTables = mysql.tableDefinitions.get();
         Map<TableRef, TableDefinition> tablesToSync = config.getTablesToSync(allSourceTables);
 
@@ -89,10 +89,8 @@ public class Updater {
             state.tableDefinitions.remove(t);
         });
 
-        allSourceTables.forEach((tableRef, sourceTableDef) -> {
-            TableDefinition stateTableDef = state.tableDefinitions.get(tableRef);
-
-            if (stateTableDef != null && !sourceTableDef.equals(stateTableDef))
+        tablesToSync.forEach((tableRef, sourceTableDef) -> {
+            if (state.tableDefinitions.containsKey(tableRef))
                 state.tableDefinitions.put(tableRef, sourceTableDef);
         });
     }
@@ -172,10 +170,9 @@ public class Updater {
 
                 if (desirable(sourceEvent)) {
                     if (!state.tableStates.containsKey(sourceEvent.tableRef)) {
-                        updateState();
+                        updateStateTableInfo();
                         return;
                     }
-
                     switch (sourceEvent.event) {
                         case INSERT:
                             emitFromInsert(sourceEvent);
@@ -189,14 +186,12 @@ public class Updater {
                         default:
                             throw new RuntimeException("Unexpected case: " + sourceEvent.event);
                     }
-
                 } else {
                     out.emitEvent(Event.createNop(), state);
 
                     if (sourceEvent.event == SourceEventType.TIMEOUT && state.tableStates.values().stream().anyMatch(tableState -> !tableState.finishedImport))
                         return;
                 }
-
                 if (target != null && sourceEvent.binlogPosition.equals(target))
                     return;
             }
@@ -213,7 +208,7 @@ public class Updater {
     private void emitFromInsert(SourceEvent event) {
         for (Row row : event.newRows) {
             if (state.tableDefinitions.get(event.tableRef).columns.size() != row.getColumnCount())
-                updateState();
+                updateStateTableInfo();
             out.emitEvent(Event.createUpsert(event.tableRef, row), state);
         }
     }
@@ -221,7 +216,7 @@ public class Updater {
     private void emitFromUpdate(SourceEvent event) {
         for (int i = 0; i < event.oldRows.size(); ++i) {
             if (state.tableDefinitions.get(event.tableRef).columns.size() != event.oldRows.get(i).getColumnCount())
-                updateState();
+                updateStateTableInfo();
             out.emitEvent(Event.createDelete(event.tableRef, event.oldRows.get(i)), state);
             out.emitEvent(Event.createUpsert(event.tableRef, event.newRows.get(i)), state);
         }
@@ -230,7 +225,7 @@ public class Updater {
     private void emitFromDelete(SourceEvent event) {
         for (Row row : event.newRows) {
             if (state.tableDefinitions.get(event.tableRef).columns.size() != row.getColumnCount())
-                updateState();
+                updateStateTableInfo();
             out.emitEvent(Event.createDelete(event.tableRef, row), state);
         }
     }
