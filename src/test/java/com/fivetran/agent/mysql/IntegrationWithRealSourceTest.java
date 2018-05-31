@@ -17,7 +17,7 @@ import java.util.Optional;
 
 import static com.fivetran.agent.mysql.Main.LOG;
 
-public class IntegrationWithRealSourceSpec {
+public class IntegrationWithRealSourceTest {
 
     private BinlogPosition binlogPosition = new BinlogPosition("file", -1L);
     private ReadSourceLog read = new ReadSourceLog() {

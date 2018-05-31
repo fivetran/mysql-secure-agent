@@ -22,7 +22,7 @@ import static javax.xml.bind.DatatypeConverter.parseHexBinary;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-public class BinlogClientSpec {
+public class BinlogClientTest {
 
     private static BinlogClient client;
 

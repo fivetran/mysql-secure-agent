@@ -21,7 +21,7 @@ import java.util.Optional;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-public class DeserializeSpec {
+public class DeserializeTest {
 
     @Test
     public void deserializeCredentials() {

@@ -23,7 +23,7 @@ import java.util.*;
 import static org.junit.Assert.*;
 
 // TODO since Updater#update will infinitely loop, we can use BatchUpdaterSpec for integration tests. We'll write what unit tests we can here
-public class UpdaterSpec {
+public class UpdaterTest {
     private Config config = new Config();
     private List<Row> readRows = new ArrayList<>();
     private List<SourceEvent> sourceEvents = new ArrayList<>();

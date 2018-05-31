@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
 
-public class BatchUpdaterSpec {
+public class BatchUpdaterTest {
     private Config config = new Config();
     private List<Row> readRows = new ArrayList<>();
     private List<SourceEvent> sourceEvents = new ArrayList<>();

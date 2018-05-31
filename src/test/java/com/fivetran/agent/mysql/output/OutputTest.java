@@ -31,7 +31,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 // TODO add test to check contents of state file
-public class OutputSpec {
+public class OutputTest {
     private Map<File, String> mockOutputFiles = new HashMap<>();
     //    private final int MAX_SIZE = 1024;
     private BucketClient mockClient = new BucketClient() {

@@ -15,7 +15,7 @@ import org.junit.Test;
 
 import java.util.*;
 
-public class IntegrationWithMockSourceSpec {
+public class IntegrationWithMockSourceTest {
     private List<Row> readRows = new ArrayList<>();
 
     private Rows rows = new Rows() {

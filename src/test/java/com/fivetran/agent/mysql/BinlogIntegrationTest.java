@@ -23,7 +23,7 @@ import java.util.Optional;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-public class BinlogIntegrationSpec {
+public class BinlogIntegrationTest {
     private static DatabaseCredentials creds;
     private static DataSource dataSource;
     private static String database = "mysql_agent_binlog_integration";
