@@ -23,59 +23,85 @@ public class SerializeTest {
     @Test
     public void serializeAgentState() {
         String correctResult = "{\n" +
-                " \"binlogPosition\": {\n" +
-                "  \"file\": \"some_binlog_file\",\n" +
-                "  \"position\": 1\n" +
-                " },\n" +
-                " \"tableStates\": {\n" +
-                "  \"schema_one.table_one\": {\n" +
-                "   \"lastSyncedPrimaryKey\": {\n" +
-                "    \"table_pkey\": \"pkey_value\"\n" +
-                "   },\n" +
-                "   \"finishedImport\": true\n" +
-                "  }\n" +
-                " },\n" +
-                " \"tableDefinitions\": {\n" +
-                "  \"schema_one.table_one\": {\n" +
-                "   \"table\": \"schema_one.table_one\", \n" +
-                "   \"foreignKeys\": {\n" +
-                "    \"foreign_schema.foreign_table\": {\n" +
-                "     \"columns\": [\"table_fkey\"],\n" +
-                "     \"referencedColumns\": [\"foreign_table_pkey\"]\n" +
+                "  \"binlogPosition\" : {\n" +
+                "    \"file\" : \"some_binlog_file\",\n" +
+                "    \"position\" : 1234567890\n" +
+                "  },\n" +
+                "  \"tableStates\" : {\n" +
+                "    \"primary_schema.primary_table\" : {\n" +
+                "      \"lastSyncedPrimaryKey\" : {\n" +
+                "        \"primary_pkey\" : \"primary_pkey_value\"\n" +
+                "      },\n" +
+                "      \"finishedImport\" : true\n" +
+                "    },\n" +
+                "    \"foreign_schema.foreign_table\" : {\n" +
+                "      \"lastSyncedPrimaryKey\" : null,\n" +
+                "      \"finishedImport\" : false\n" +
                 "    }\n" +
-                "   },\n" +
-                "   \"tableDefinition\": [{\n" +
-                "    \"name\": \"table_pkey\",\n" +
-                "    \"type\": \"text\",\n" +
-                "    \"key\": true\n" +
-                "   }, {\n" +
-                "    \"name\": \"table_fkey\",\n" +
-                "    \"type\": \"text\",\n" +
-                "    \"key\": false\n" +
-                "   }]\n" +
+                "  },\n" +
+                "  \"tableDefinitions\" : {\n" +
+                "    \"primary_schema.primary_table\" : {\n" +
+                "      \"table\" : \"primary_schema.primary_table\",\n" +
+                "      \"foreignKeys\" : {\n" +
+                "        \"foreign_schema.foreign_table\" : {\n" +
+                "          \"columns\" : [ \"primary_fkey\" ],\n" +
+                "          \"referencedColumns\" : [ \"foreign_pkey\" ]\n" +
+                "        }\n" +
+                "      },\n" +
+                "      \"tableDefinition\" : [ {\n" +
+                "        \"name\" : \"primary_pkey\",\n" +
+                "        \"type\" : \"text\",\n" +
+                "        \"key\" : true\n" +
+                "      }, {\n" +
+                "        \"name\" : \"primary_fkey\",\n" +
+                "        \"type\" : \"text\",\n" +
+                "        \"key\" : false\n" +
+                "      } ]\n" +
+                "    },\n" +
+                "    \"foreign_schema.foreign_table\" : {\n" +
+                "      \"table\" : \"foreign_schema.foreign_table\",\n" +
+                "      \"foreignKeys\" : null,\n" +
+                "      \"tableDefinition\" : [ {\n" +
+                "        \"name\" : \"foreign_pkey\",\n" +
+                "        \"type\" : \"text\",\n" +
+                "        \"key\" : true\n" +
+                "      } ]\n" +
+                "    }\n" +
                 "  }\n" +
-                " }\n" +
                 "}";
 
+        TableRef primaryTableRef = new TableRef("primary_schema", "primary_table");
+        TableRef foreignTableRef = new TableRef("foreign_schema", "foreign_table");
+
+        TableState primaryTableState = new TableState();
+        primaryTableState.finishedImport = true;
+        primaryTableState.lastSyncedPrimaryKey = Optional.of(ImmutableMap.of("primary_pkey", "primary_pkey_value"));
+
+        TableState referencedTableState = new TableState();
+        referencedTableState.finishedImport = false;
+        referencedTableState.lastSyncedPrimaryKey = Optional.empty();
+
+        TableDefinition primaryTableDef = new TableDefinition();
+        primaryTableDef.columns = new ArrayList<>();
+        primaryTableDef.columns.add(new ColumnDefinition("primary_pkey", "text", true));
+        primaryTableDef.columns.add(new ColumnDefinition("primary_fkey", "text", false));
+        primaryTableDef.table = primaryTableRef;
+        primaryTableDef.foreignKeys = ImmutableMap.of(new TableRef("foreign_schema", "foreign_table"), new ForeignKey("primary_fkey", "foreign_pkey"));
+
+        TableDefinition referencedTableDef = new TableDefinition();
+        referencedTableDef.columns = new ArrayList<>();
+        referencedTableDef.columns.add(new ColumnDefinition("foreign_pkey", "text", true));
+        referencedTableDef.table = foreignTableRef;
+
         AgentState state = new AgentState();
-        TableRef tableRef = new TableRef("schema_one", "table_one");
+        state.binlogPosition = new BinlogPosition("some_binlog_file", 1234567890L);
+        state.tableStates.put(primaryTableRef, primaryTableState);
+        state.tableStates.put(foreignTableRef, referencedTableState);
+        state.tableDefinitions.put(primaryTableRef, primaryTableDef);
+        state.tableDefinitions.put(foreignTableRef, referencedTableDef);
 
-        TableState tableState = new TableState();
-        tableState.finishedImport = true;
-        tableState.lastSyncedPrimaryKey = Optional.of(ImmutableMap.of("table_pkey", "pkey_value"));
-
-        TableDefinition tableDef = new TableDefinition();
-        tableDef.columns = new ArrayList<>();
-        tableDef.columns.add(new ColumnDefinition("table_pkey", "text", true));
-        tableDef.columns.add(new ColumnDefinition("table_fkey", "text", false));
-        tableDef.table = tableRef;
-        tableDef.foreignKeys = ImmutableMap.of(new TableRef("foreign_schema", "foreign_table"), new ForeignKey("table_fkey", "foreign_table_pkey"));
-
-        state.binlogPosition = new BinlogPosition("some_binlog_file", 1);
-        state.tableStates.put(tableRef, tableState);
-        state.tableDefinitions.put(tableRef, tableDef);
+        System.out.println(Serialize.value(state));
 
         assertTrue(correctResult.equals(Serialize.value(state)));
-
     }
 }

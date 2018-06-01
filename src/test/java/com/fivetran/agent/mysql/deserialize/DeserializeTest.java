@@ -9,6 +9,8 @@ import com.fivetran.agent.mysql.config.Config;
 import com.fivetran.agent.mysql.config.SchemaConfig;
 import com.fivetran.agent.mysql.config.TableConfig;
 import com.fivetran.agent.mysql.credentials.Credentials;
+import com.fivetran.agent.mysql.output.ColumnDefinition;
+import com.fivetran.agent.mysql.output.ForeignKey;
 import com.fivetran.agent.mysql.output.TableDefinition;
 import com.fivetran.agent.mysql.source.TableRef;
 import com.fivetran.agent.mysql.state.AgentState;
@@ -56,59 +58,75 @@ public class DeserializeTest {
     @Test
     public void deserializeState() {
         String stateJson = "{\n" +
-                " \"binlogPosition\": {\n" +
-                "  \"file\": \"some_binlog_file\",\n" +
-                "  \"position\": 1\n" +
-                " },\n" +
-                " \"tableStates\": {\n" +
-                "  \"schema_one.table_one\": {\n" +
-                "   \"lastSyncedPrimaryKey\": {\n" +
-                "    \"table_pkey\": \"pkey_value\"\n" +
-                "   },\n" +
-                "   \"finishedImport\": true\n" +
-                "  }\n" +
-                " },\n" +
-                " \"tableDefinitions\": {\n" +
-                "  \"schema_one.table_one\": {\n" +
-                "   \"table\": \"schema_one.table_one\", \n" +
-                "   \"foreignKeys\": {\n" +
-                "    \"foreign_schema.foreign_table\": {\n" +
-                "     \"columns\": [\"table_fkey\"],\n" +
-                "     \"referencedColumns\": [\"foreign_table_pkey\"]\n" +
+                "  \"binlogPosition\" : {\n" +
+                "    \"file\" : \"some_binlog_file\",\n" +
+                "    \"position\" : 1234567890\n" +
+                "  },\n" +
+                "  \"tableStates\" : {\n" +
+                "    \"primary_schema.primary_table\" : {\n" +
+                "      \"lastSyncedPrimaryKey\" : {\n" +
+                "        \"primary_pkey\" : \"primary_pkey_value\"\n" +
+                "      },\n" +
+                "      \"finishedImport\" : true\n" +
+                "    },\n" +
+                "    \"foreign_schema.foreign_table\" : {\n" +
+                "      \"lastSyncedPrimaryKey\" : null,\n" +
+                "      \"finishedImport\" : false\n" +
                 "    }\n" +
-                "   },\n" +
-                "   \"tableDefinition\": [{\n" +
-                "    \"name\": \"table_pkey\",\n" +
-                "    \"type\": \"text\",\n" +
-                "    \"key\": true\n" +
-                "   }, {\n" +
-                "    \"name\": \"table_fkey\",\n" +
-                "    \"type\": \"text\",\n" +
-                "    \"key\": false\n" +
-                "   }]\n" +
+                "  },\n" +
+                "  \"tableDefinitions\" : {\n" +
+                "    \"primary_schema.primary_table\" : {\n" +
+                "      \"table\" : \"primary_schema.primary_table\",\n" +
+                "      \"foreignKeys\" : {\n" +
+                "        \"foreign_schema.foreign_table\" : {\n" +
+                "          \"columns\" : [ \"primary_fkey\" ],\n" +
+                "          \"referencedColumns\" : [ \"foreign_pkey\" ]\n" +
+                "        }\n" +
+                "      },\n" +
+                "      \"tableDefinition\" : [ {\n" +
+                "        \"name\" : \"primary_pkey\",\n" +
+                "        \"type\" : \"text\",\n" +
+                "        \"key\" : true\n" +
+                "      }, {\n" +
+                "        \"name\" : \"primary_fkey\",\n" +
+                "        \"type\" : \"text\",\n" +
+                "        \"key\" : false\n" +
+                "      } ]\n" +
+                "    },\n" +
+                "    \"foreign_schema.foreign_table\" : {\n" +
+                "      \"table\" : \"foreign_schema.foreign_table\",\n" +
+                "      \"foreignKeys\" : null,\n" +
+                "      \"tableDefinition\" : [ {\n" +
+                "        \"name\" : \"foreign_pkey\",\n" +
+                "        \"type\" : \"text\",\n" +
+                "        \"key\" : true\n" +
+                "      } ]\n" +
+                "    }\n" +
                 "  }\n" +
-                " }\n" +
-                "}"; 
+                "}";
 
-                
-//        String stateJson = "{\n" +
-//                "  \"binlogPosition\": {\n" +
-//                "    \"file\": \"some_binlog_file\",\n" +
-//                "    \"position\": 1234567890\n" +
-//                "  },\n" +
-//                "  \"tableStates\": {\n" +
-//                "    \"schema_one.table_one\": {\n" +
-//                "      \"finishedImport\": true,\n" +
-//                "      \"lastSyncedPrimaryKey\": {\n" +
-//                "        \"table_pkey\": \"pkey_value\"\n" +
-//                "      }\n" +
-//                "    }\n" +
-//                "  }\n" +
-//                "}";
+        TableRef primaryTableRef = new TableRef("primary_schema", "primary_table");
+        TableRef foreignTableRef = new TableRef("foreign_schema", "foreign_table");
+
         AgentState state = Deserialize.deserialize(new ByteArrayInputStream(stateJson.getBytes()), AgentState.class);
-        assertTrue(state.tableStates.get(new TableRef("schema_one", "table_one")).finishedImport);
-        assertTrue(state.tableStates.get(new TableRef("schema_one", "table_one")).lastSyncedPrimaryKey.isPresent());
-        assertThat(state.tableStates.get(new TableRef("schema_one", "table_one")).lastSyncedPrimaryKey.get().get("table_pkey"), equalTo("pkey_value"));
+
+        assertTrue(state.tableStates.get(primaryTableRef).finishedImport);
+        assertThat(state.tableStates.get(primaryTableRef).lastSyncedPrimaryKey.get().get("primary_pkey"), equalTo("primary_pkey_value"));
+
+        assertFalse(state.tableStates.get(foreignTableRef).finishedImport);
+        assertFalse(state.tableStates.get(foreignTableRef).lastSyncedPrimaryKey.isPresent());
+
+        assertThat(state.tableDefinitions.get(primaryTableRef).table, equalTo(primaryTableRef));
+        assertThat(state.tableDefinitions.get(primaryTableRef).columns.size(), equalTo(2));
+        assertThat(state.tableDefinitions.get(primaryTableRef).columns.get(0), equalTo(new ColumnDefinition("primary_pkey", "text", true)));
+        assertThat(state.tableDefinitions.get(primaryTableRef).columns.get(1), equalTo(new ColumnDefinition("primary_fkey", "text", false)));
+        assertThat(state.tableDefinitions.get(primaryTableRef).foreignKeys.get(foreignTableRef), equalTo(new ForeignKey("primary_fkey", "foreign_pkey")));
+
+        assertThat(state.tableDefinitions.get(foreignTableRef).table, equalTo(foreignTableRef));
+        assertThat(state.tableDefinitions.get(foreignTableRef).columns.size(), equalTo(1));
+        assertThat(state.tableDefinitions.get(foreignTableRef).columns.get(0), equalTo(new ColumnDefinition("foreign_pkey", "text", true)));
+        assertThat(state.tableDefinitions.get(foreignTableRef).foreignKeys, equalTo(null));
+
         assertThat(state.binlogPosition.file, equalTo("some_binlog_file"));
         assertThat(state.binlogPosition.position, equalTo(1234567890L));
     }
@@ -219,10 +237,4 @@ public class DeserializeTest {
         assertThat(tableDefinition.columns.get(1).type, equalTo("text"));
         assertThat(tableDefinition.columns.get(1).key, equalTo(false));
     }
-
-//    @Test
-//    public void deserializeEmptyTableDefinitions() {
-//        TableDefinitions state = Deserialize.deserialize(new ByteArrayInputStream("".getBytes()), TableDefinitions.class);
-//        assertThat(state, equalTo(new TableDefinitions()));
-//    }
 }
