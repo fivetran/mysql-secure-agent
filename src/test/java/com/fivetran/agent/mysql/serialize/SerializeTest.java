@@ -1,9 +1,5 @@
 package com.fivetran.agent.mysql.serialize;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fivetran.agent.mysql.output.ColumnDefinition;
 import com.fivetran.agent.mysql.output.ForeignKey;
 import com.fivetran.agent.mysql.output.TableDefinition;
