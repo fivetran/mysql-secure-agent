@@ -123,7 +123,7 @@ public class BucketOutput implements Output {
     }
 
     private void refreshFileChannel() {
-        path = Paths.get(DATA_FILE_PREFIX + Instant.now().getEpochSecond() + DATA_FILE_EXTENSION);
+        path = Paths.get(DATA_FILE_PREFIX + Instant.now().toEpochMilli() + DATA_FILE_EXTENSION);
         try {
             dataFileChannel = FileChannel.open(path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
         } catch (IOException e) {
