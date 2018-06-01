@@ -5,10 +5,9 @@ package com.fivetran.agent.mysql.output;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fivetran.agent.mysql.Output;
-import com.fivetran.agent.mysql.Serialize;
+import com.fivetran.agent.mysql.serialize.Serialize;
 import com.fivetran.agent.mysql.log.LogGeneralException;
 import com.fivetran.agent.mysql.log.LogMessage;
-import com.fivetran.agent.mysql.source.TableRef;
 import com.fivetran.agent.mysql.state.AgentState;
 
 import java.io.IOException;
@@ -19,8 +18,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
 
 import static com.fivetran.agent.mysql.Main.JSON;
 import static com.fivetran.agent.mysql.Main.LOG;

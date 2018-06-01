@@ -13,6 +13,7 @@ import com.fivetran.agent.mysql.source.binlog.client.shyiko.Greeting;
 import com.fivetran.agent.mysql.source.binlog.parser.TableMapEventBody;
 import com.google.common.collect.ImmutableList;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.*;
@@ -61,6 +62,8 @@ public class BinlogClientTest {
                 )));
     }
 
+    // For debugging
+    @Ignore
     @Test
     public void simultaneousCalls() throws Exception {
         BinlogPosition startPosition = new BinlogPosition("mysql-bin.000008", 4L);
@@ -84,18 +87,12 @@ public class BinlogClientTest {
         }
     }
 
+    // For debugging
+    @Ignore
     @Test
     public void update() throws Exception {
         BinlogPosition startingPosition = new BinlogPosition("mysql-bin.000008", 4L);
-        List<SourceEvent> relevantEvents = new ArrayList<>();
-
-        try (EventReader eventReader = client.events(startingPosition)) {
-            while (true) {
-                SourceEvent sourceEvent = eventReader.readEvent();
-
-                relevantEvents.add(sourceEvent);
-            }
-        }
+        getAllBinlogEvents(startingPosition);
     }
 
     private class MockChannel implements PacketChannel {

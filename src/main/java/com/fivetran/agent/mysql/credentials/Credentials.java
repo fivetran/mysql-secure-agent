@@ -5,9 +5,20 @@ package com.fivetran.agent.mysql.credentials;
 
 import com.fivetran.agent.mysql.config.DatabaseCredentials;
 
+import java.util.Objects;
+
 public class Credentials {
     public S3 s3Credentials = new S3();
     public DatabaseCredentials dbCredentials;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Credentials that = (Credentials) o;
+        return Objects.equals(s3Credentials, that.s3Credentials) &&
+                Objects.equals(dbCredentials, that.dbCredentials);
+    }
 
     public class S3 {
         public String bucket;

@@ -10,7 +10,6 @@ import com.fivetran.agent.mysql.config.SchemaConfig;
 import com.fivetran.agent.mysql.config.TableConfig;
 import com.fivetran.agent.mysql.credentials.Credentials;
 import com.fivetran.agent.mysql.output.TableDefinition;
-import com.fivetran.agent.mysql.output.TableDefinitions;
 import com.fivetran.agent.mysql.source.TableRef;
 import com.fivetran.agent.mysql.state.AgentState;
 import org.junit.Test;
@@ -20,6 +19,7 @@ import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.*;
 
 public class DeserializeTest {
 
@@ -56,22 +56,58 @@ public class DeserializeTest {
     @Test
     public void deserializeState() {
         String stateJson = "{\n" +
-                "  \"binlogPosition\": {\n" +
-                "    \"file\": \"some_binlog_file\",\n" +
-                "    \"position\": 1234567890\n" +
-                "  },\n" +
-                "  \"tables\": {\n" +
-                "    \"schema_one.table_one\": {\n" +
-                "      \"finishedImport\": true,\n" +
-                "      \"lastSyncedPrimaryKey\": {\n" +
-                "        \"table_pkey\": \"pkey_value\"\n" +
-                "      }\n" +
-                "    }\n" +
+                " \"binlogPosition\": {\n" +
+                "  \"file\": \"some_binlog_file\",\n" +
+                "  \"position\": 1\n" +
+                " },\n" +
+                " \"tableStates\": {\n" +
+                "  \"schema_one.table_one\": {\n" +
+                "   \"lastSyncedPrimaryKey\": {\n" +
+                "    \"table_pkey\": \"pkey_value\"\n" +
+                "   },\n" +
+                "   \"finishedImport\": true\n" +
                 "  }\n" +
-                "}";
+                " },\n" +
+                " \"tableDefinitions\": {\n" +
+                "  \"schema_one.table_one\": {\n" +
+                "   \"table\": \"schema_one.table_one\", \n" +
+                "   \"foreignKeys\": {\n" +
+                "    \"foreign_schema.foreign_table\": {\n" +
+                "     \"columns\": [\"table_fkey\"],\n" +
+                "     \"referencedColumns\": [\"foreign_table_pkey\"]\n" +
+                "    }\n" +
+                "   },\n" +
+                "   \"tableDefinition\": [{\n" +
+                "    \"name\": \"table_pkey\",\n" +
+                "    \"type\": \"text\",\n" +
+                "    \"key\": true\n" +
+                "   }, {\n" +
+                "    \"name\": \"table_fkey\",\n" +
+                "    \"type\": \"text\",\n" +
+                "    \"key\": false\n" +
+                "   }]\n" +
+                "  }\n" +
+                " }\n" +
+                "}"; 
+
+                
+//        String stateJson = "{\n" +
+//                "  \"binlogPosition\": {\n" +
+//                "    \"file\": \"some_binlog_file\",\n" +
+//                "    \"position\": 1234567890\n" +
+//                "  },\n" +
+//                "  \"tableStates\": {\n" +
+//                "    \"schema_one.table_one\": {\n" +
+//                "      \"finishedImport\": true,\n" +
+//                "      \"lastSyncedPrimaryKey\": {\n" +
+//                "        \"table_pkey\": \"pkey_value\"\n" +
+//                "      }\n" +
+//                "    }\n" +
+//                "  }\n" +
+//                "}";
         AgentState state = Deserialize.deserialize(new ByteArrayInputStream(stateJson.getBytes()), AgentState.class);
-        assertThat(state.tableStates.get(new TableRef("schema_one", "table_one")).finishedImport, equalTo(true));
-        assertThat(state.tableStates.get(new TableRef("schema_one", "table_one")).lastSyncedPrimaryKey.isPresent(), equalTo(true));
+        assertTrue(state.tableStates.get(new TableRef("schema_one", "table_one")).finishedImport);
+        assertTrue(state.tableStates.get(new TableRef("schema_one", "table_one")).lastSyncedPrimaryKey.isPresent());
         assertThat(state.tableStates.get(new TableRef("schema_one", "table_one")).lastSyncedPrimaryKey.get().get("table_pkey"), equalTo("pkey_value"));
         assertThat(state.binlogPosition.file, equalTo("some_binlog_file"));
         assertThat(state.binlogPosition.position, equalTo(1234567890L));
@@ -164,8 +200,8 @@ public class DeserializeTest {
                 "  }\n" +
                 "}";
 
-        TableDefinitions tableDefinitions = Deserialize.deserialize(new ByteArrayInputStream(tableDefinitionsString.getBytes()), TableDefinitions.class);
-        TableDefinition tableDefinition = tableDefinitions.tableDefinitions.get(new TableRef("test_schema", "test_table"));
+//        TableDefinitions tableDefinitions = Deserialize.deserialize(new ByteArrayInputStream(tableDefinitionsString.getBytes()), TableDefinitions.class);
+        TableDefinition tableDefinition = new TableDefinition(); //  = tableDefinitions.tableDefinitions.get(new TableRef("test_schema", "test_table"));
 
         assertThat(tableDefinition.table, equalTo(new TableRef("test_schema", "test_table")));
 
@@ -184,9 +220,9 @@ public class DeserializeTest {
         assertThat(tableDefinition.columns.get(1).key, equalTo(false));
     }
 
-    @Test
-    public void deserializeEmptyTableDefinitions() {
-        TableDefinitions state = Deserialize.deserialize(new ByteArrayInputStream("".getBytes()), TableDefinitions.class);
-        assertThat(state, equalTo(new TableDefinitions()));
-    }
+//    @Test
+//    public void deserializeEmptyTableDefinitions() {
+//        TableDefinitions state = Deserialize.deserialize(new ByteArrayInputStream("".getBytes()), TableDefinitions.class);
+//        assertThat(state, equalTo(new TableDefinitions()));
+//    }
 }
