@@ -7,10 +7,7 @@ import com.fivetran.agent.mysql.config.DatabaseCredentials;
 import com.fivetran.agent.mysql.source.*;
 import com.fivetran.agent.mysql.source.binlog.client.BinlogClient;
 import com.fivetran.agent.mysql.source.binlog.client.EventReader;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -23,6 +20,7 @@ import java.util.Optional;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+@Ignore
 public class BinlogIntegrationTest {
     private static DatabaseCredentials creds;
     private static DataSource dataSource;
@@ -30,7 +28,6 @@ public class BinlogIntegrationTest {
 
     @BeforeClass
     public static void beforeClass() {
-        // todo: switch once mysql-master binlog format is set to ROW
         creds =
                 new DatabaseCredentials(
                         "localhost",
@@ -38,11 +35,6 @@ public class BinlogIntegrationTest {
                         "",
                         ""
                 );
-//                new DatabaseCredentials(
-//                        "",
-//                        3306,
-//                        "",
-//                        "");
 
         dataSource = QueryDatabase.getDataSource(creds);
     }

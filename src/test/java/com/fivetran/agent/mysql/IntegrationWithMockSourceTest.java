@@ -11,12 +11,16 @@ import com.fivetran.agent.mysql.source.*;
 import com.fivetran.agent.mysql.source.binlog.client.EventReader;
 import com.fivetran.agent.mysql.state.AgentState;
 import com.google.common.collect.ImmutableList;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.*;
 
+@Ignore
 public class IntegrationWithMockSourceTest {
+
     private List<Row> readRows = new ArrayList<>();
+    private List<SourceEvent> sourceEvents = new ArrayList<>();
 
     private Rows rows = new Rows() {
         @Override
@@ -36,8 +40,8 @@ public class IntegrationWithMockSourceTest {
     };
 
     private ImportTable importTable = (table, selectColumns, pagingParams) -> rows;
-
     private Map<TableRef, TableDefinition> tableDefinitions = new HashMap<>();
+    private BinlogPosition binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 1L);
 
     private ReadSourceLog read = new ReadSourceLog() {
         @Override
@@ -47,10 +51,14 @@ public class IntegrationWithMockSourceTest {
 
         @Override
         public EventReader events(BinlogPosition startPosition) {
+            Iterator<SourceEvent> sourceEventIterable = sourceEvents.iterator();
             return new EventReader() {
                 @Override
                 public SourceEvent readEvent() {
-                    return null;
+                    if (sourceEventIterable.hasNext())
+                        return sourceEventIterable.next();
+                    else
+                        return SourceEvent.createTimeout(binlogPosition);
                 }
 
                 @Override
@@ -61,24 +69,23 @@ public class IntegrationWithMockSourceTest {
         }
     };
 
-    private BinlogPosition binlogPosition = new BinlogPosition("file", -1L);
-    private final Output out = new BucketOutput(new S3Client("mysql-secure-agent-test"), 64);
     private final Log log = new Logger(new RealLogWriter());
 
     @Test
     public void writeToS3UsingMockedSourceData() throws Exception {
-        MysqlApi api = new MysqlApi(importTable, null, null, () -> tableDefinitions, read);
-        Updater updater = new Updater(new Config(), api, out, log, new AgentState());
+        try (Output out = new BucketOutput(new S3Client("mysql-secure-agent-test"))) {
+            MysqlApi api = new MysqlApi(importTable, null, null, () -> tableDefinitions, read);
+            BatchUpdater updater = new BatchUpdater(new Config(), api, out, log, new AgentState());
 
-        TableRef tableRef = new TableRef("test_schema", "test_table");
-        TableDefinition selectedTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
-        tableDefinitions.put(tableRef, selectedTableDef);
+            TableRef tableRef = new TableRef("test_schema", "test_table");
+            TableDefinition selectedTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
+            tableDefinitions.put(tableRef, selectedTableDef);
 
-        Row row1 = new Row("1", "foo-1"), row2 = new Row("2", "foo-2"), row3 = new Row("3", "foo-3"), row4 = new Row("4", "foo-4");
+            readRows = ImmutableList.of(new Row("1", "foo-1"), new Row("2", "foo-2"), new Row("3", "foo-3"), new Row("4", "foo-4"));
+            SourceEvent insertEvent = SourceEvent.createInsert(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 2L), ImmutableList.of(new Row("5", "foo-5")));
+            sourceEvents.add(insertEvent);
 
-
-        readRows = ImmutableList.of(row1, row2);
-
-        updater.update();
+            updater.update();
+        }
     }
 }
