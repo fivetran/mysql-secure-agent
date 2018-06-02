@@ -1,7 +1,7 @@
 /**
 * Copyright (c) Fivetran 2018
 **/
-package com.fivetran.agent.mysql;
+package com.fivetran.agent.mysql.binlog;
 
 import com.fivetran.agent.mysql.config.DatabaseCredentials;
 import com.fivetran.agent.mysql.source.*;
