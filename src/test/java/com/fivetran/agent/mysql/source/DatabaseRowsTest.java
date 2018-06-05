@@ -19,7 +19,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.*;
 
-public class DatabaseRowsSpec {
+public class DatabaseRowsTest {
 
     @Test
     public void testQueryResults() throws SQLException {

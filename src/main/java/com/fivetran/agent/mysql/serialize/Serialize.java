@@ -1,7 +1,7 @@
 /**
 * Copyright (c) Fivetran 2018
 **/
-package com.fivetran.agent.mysql;
+package com.fivetran.agent.mysql.serialize;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -15,6 +15,7 @@ import com.fivetran.agent.mysql.source.binlog.client.EventReader;
 import com.fivetran.agent.mysql.state.AgentState;
 import com.fivetran.agent.mysql.state.TableState;
 import com.google.common.collect.ImmutableList;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -24,7 +25,8 @@ import java.util.function.Supplier;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
 
-public class BatchUpdaterSpec {
+public class BatchUpdaterTest {
+
     private Config config = new Config();
     private List<Row> readRows = new ArrayList<>();
     private List<SourceEvent> sourceEvents = new ArrayList<>();
@@ -88,6 +90,11 @@ public class BatchUpdaterSpec {
     };
     private final List<LogMessage> logMessages = new ArrayList<>();
 
+    @Before
+    public void before() {
+        tableDefinitions.clear();
+    }
+
     @Test
     public void update_onlySyncSelectedTablesWithDefaultConfigValues() throws Exception {
         TableRef selectedTable = new TableRef("test_schema", "selected_table");
@@ -101,16 +108,14 @@ public class BatchUpdaterSpec {
         Row row1 = row("1", "foo-1"), row2 = row("2", "foo-2");
         readRows = ImmutableList.of(row1, row2);
 
-        tableDefinitions.clear();
         TableDefinition selectedTableDef = new TableDefinition(selectedTable, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
-        tableDefinitions.put(selectedTable, selectedTableDef);
         TableDefinition ignoredTableDef = new TableDefinition(ignoredTable, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
+        tableDefinitions.put(selectedTable, selectedTableDef);
         tableDefinitions.put(ignoredTable, ignoredTableDef);
 
         new BatchUpdater(config, api, out, logMessages::add, state).update();
 
-        assertEquals(outEvents.size(), 5);
-        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
+        assertEquals(outEvents.size(), 3);
         assertTrue(outEvents.contains(Event.createUpsert(selectedTable, row1)));
         assertTrue(outEvents.contains(Event.createUpsert(selectedTable, row2)));
         assertTrue(outEvents.contains(Event.createNop()));
@@ -123,7 +128,6 @@ public class BatchUpdaterSpec {
         config.schemas.put("test_schema", new SchemaConfig());
         config.schemas.get("test_schema").selectOtherTables = true;
 
-        tableDefinitions.clear();
         TableDefinition selectedTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
         tableDefinitions.put(tableRef, selectedTableDef);
 
@@ -133,8 +137,7 @@ public class BatchUpdaterSpec {
         BatchUpdater initialImport = new BatchUpdater(config, api, out, logMessages::add, state);
         initialImport.update();
 
-        assertThat(outEvents.size(), equalTo(4));
-        assertTrue(outEvents.contains(Event.createTableDefinition(selectedTableDef)));
+        assertThat(outEvents.size(), equalTo(3));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row1)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row2)));
         assertTrue(outEvents.contains(Event.createNop()));
@@ -159,15 +162,14 @@ public class BatchUpdaterSpec {
     @Test
     public void update_syncHashedColumns() throws Exception {
         TableRef tableRef = new TableRef("test_schema", "test_table");
+        TableDefinition tableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
 
-        config.cryptoSalt = "sodium chloride";
+        tableDefinitions.put(tableRef, tableDef);
         config.putColumn(config, tableRef, "id", true, true);
+        config.cryptoSalt = "sodium chloride";
 
         Row row1 = row("1", "foo-1"), row2 = row("2", "foo-2");
         readRows = ImmutableList.of(row1, row2);
-
-        tableDefinitions.clear();
-        tableDefinitions.put(tableRef, new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false))));
 
         BatchUpdater updater = new BatchUpdater(config, api, out, logMessages::add, state);
         updater.update();
@@ -180,6 +182,8 @@ public class BatchUpdaterSpec {
     @Test
     public void binlogSync_updateTableDefinition() throws Exception {
         TableRef tableRef = new TableRef("test_schema", "test_table");
+        TableDefinition initialTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
+        TableDefinition updatedTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false), new ColumnDefinition("update", "text", false)));
 
         config.schemas.put("test_schema", new SchemaConfig());
         config.schemas.get("test_schema").selectOtherTables = true;
@@ -188,11 +192,9 @@ public class BatchUpdaterSpec {
         TableState tableState = new TableState();
 
         tableState.finishedImport = true;
-        state.tables.put(tableRef, tableState);
+        state.tableStates.put(tableRef, tableState);
+        state.tableDefinitions.put(tableRef, initialTableDef);
         state.binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 1L);
-
-        TableDefinition initialTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
-        TableDefinition updatedTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false), new ColumnDefinition("update", "text", false)));
 
         Supplier<Map<TableRef, TableDefinition>> updatableTableDefinitions = () -> {
             if (outEvents.size() == 0)
@@ -211,8 +213,7 @@ public class BatchUpdaterSpec {
 
         new BatchUpdater(config, customApi, out, logMessages::add, state).update();
 
-        assertEquals(outEvents.size(), 4);
-        assertTrue(outEvents.contains(Event.createTableDefinition(updatedTableDef)));
+        assertEquals(outEvents.size(), 3);
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, standardRow)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, modifiedRow)));
         assertTrue(outEvents.contains(Event.createNop()));
@@ -221,28 +222,26 @@ public class BatchUpdaterSpec {
     @Test
     public void binlogSync_allBinlogEvents() throws Exception {
         TableRef tableRef = new TableRef("test_schema", "test_table");
-
-        config.schemas.put("test_schema", new SchemaConfig());
-        config.schemas.get("test_schema").selectOtherTables = true;
-
+        TableDefinition tableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
+        Row insertedRow = new Row("1", "foo-1"), updatedRow = new Row("2", "foo-2");
         AgentState state = new AgentState();
         TableState tableState = new TableState();
 
-        tableState.finishedImport = true;
-        state.tables.put(tableRef, tableState);
-        state.binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 1L);
-
-        tableDefinitions.clear();
-        TableDefinition tableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
         tableDefinitions.put(tableRef, tableDef);
+        config.schemas.put("test_schema", new SchemaConfig());
+        config.schemas.get("test_schema").selectOtherTables = true;
 
-        Row insertedRow = new Row("1", "foo-1"), updatedRow = new Row("2", "foo-2");
+        tableState.finishedImport = true;
+        state.tableStates.put(tableRef, tableState);
+        state.tableDefinitions.put(tableRef, tableDef);
+        state.binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 1L);
 
         SourceEvent insert = SourceEvent.createInsert(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 2L), ImmutableList.of(insertedRow));
         SourceEvent other1 = SourceEvent.createOther(new BinlogPosition("mysql-bin-changelog.000001", 3L));
         SourceEvent update = SourceEvent.createUpdate(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 4L), ImmutableList.of(insertedRow), ImmutableList.of(updatedRow));
         SourceEvent other2 = SourceEvent.createOther(new BinlogPosition("mysql-bin-changelog.000001", 5L));
         SourceEvent delete = SourceEvent.createDelete(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 6L), ImmutableList.of(updatedRow));
+
         sourceEvents = ImmutableList.of(insert, other1, update, other2, delete);
         binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 7L);
 
@@ -297,12 +296,11 @@ public class BatchUpdaterSpec {
 
         new BatchUpdater(config, customApi, out, logMessages::add, state).update();
 
-        assertEquals(outEvents.size(), 7);
+        assertEquals(outEvents.size(), 6);
 
         // First binlog sync
         assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredTable
         assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredSchema
-        assertTrue(outEvents.contains(Event.createTableDefinition(tableDef)));  // insertSelectedTable
 
         // Second binlog sync
         assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredTable
@@ -321,9 +319,8 @@ public class BatchUpdaterSpec {
         TableState tableState = new TableState();
 
         tableState.lastSyncedPrimaryKey = Optional.of(Collections.singletonMap("id", "3"));
-        state.tables.put(tableRef, tableState);
+        state.tableStates.put(tableRef, tableState);
 
-        tableDefinitions.clear();
         TableDefinition selectedTableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
         tableDefinitions.put(tableRef, selectedTableDef);
 

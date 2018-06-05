@@ -19,7 +19,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-public class ConfigSpec {
+public class ConfigTest {
 
     // TODO test this!
     @Ignore

@@ -19,7 +19,7 @@ import java.util.Map;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class TableDefinitionsSpec {
+public class TableDefinitionsTest {
     @Test
     public void get_oneColumn() {
         Query query = new Query() {

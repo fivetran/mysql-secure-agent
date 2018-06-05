@@ -24,6 +24,7 @@ public class Main {
             .registerModule(new Jdk8Module())
             .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
 
+    // TODO handle cleanup of stale sessions and serverConfig
     public static void main (String args[]) {
         Credentials creds = Deserialize.credentials();
 

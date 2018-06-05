@@ -32,7 +32,6 @@ public class Updater {
     final Output out;
     private final Log log;
     protected final AgentState state;
-    Map<TableRef, TableDefinition> tablesToSync;
 
     public Updater(Config config, MysqlApi mysql, Output out, Log log, AgentState state) {
         this.config = config;
@@ -43,7 +42,7 @@ public class Updater {
     }
 
     public void update() throws Exception {
-        updateTableDefinitions();
+        updateState();
 
         while (true) {
             sync();
@@ -54,36 +53,53 @@ public class Updater {
         TableRef tableToImport = findTableToImport();
 
         if (tableToImport != null)
-            syncPageFromTable(tablesToSync.get(tableToImport));
+            syncPageFromTable(tableToImport);
 
         syncFromBinlog(null);
     }
 
     TableRef findTableToImport() {
-        for (TableRef tableRef : state.tables.keySet()) {
-            if (!state.tables.get(tableRef).finishedImport)
+        for (TableRef tableRef : state.tableStates.keySet()) {
+            if (!state.tableStates.get(tableRef).finishedImport)
                 return tableRef;
         }
         return null;
     }
 
-    private void updateState(Set<TableRef> tablesToSync) {
-        Set<TableRef> newTables = Sets.difference(tablesToSync, state.tables.keySet());
-        newTables.forEach(t -> state.tables.put(t, new TableState()));
-
-        Set<TableRef> lostTables = Sets.difference(state.tables.keySet(), tablesToSync);
-        lostTables.forEach(state.tables::remove);
+    void updateState() {
+        updateStateTableInfo();
 
         if (state.binlogPosition == null)
             state.binlogPosition = mysql.readSourceLog.currentPosition();
     }
 
-    void syncPageFromTable(TableDefinition tableDefinition) {
-        TableRef tableRef = tableDefinition.table;
-        TableState tableState = state.tables.get(tableRef);
-        List<String> hashedColumns = hashedColumns(tableRef);
+    private void updateStateTableInfo() {
+        Map<TableRef, TableDefinition> allSourceTables = mysql.tableDefinitions.get();
+        Map<TableRef, TableDefinition> tablesToSync = config.getTablesToSync(allSourceTables);
 
-        out.emitEvent(Event.createTableDefinition(tableDefinition), state);
+        Set<TableRef> newTables = Sets.difference(tablesToSync.keySet(), state.tableStates.keySet());
+        newTables.forEach(t -> {
+            state.tableStates.put(t, new TableState());
+            state.tableDefinitions.put(t, tablesToSync.get(t));
+        });
+
+        Set<TableRef> lostTables = Sets.difference(state.tableStates.keySet(), tablesToSync.keySet());
+        lostTables.forEach(t -> {
+            state.tableStates.remove(t);
+            state.tableDefinitions.remove(t);
+        });
+
+        tablesToSync.forEach((tableRef, sourceTableDef) -> {
+            if (state.tableDefinitions.containsKey(tableRef))
+                state.tableDefinitions.put(tableRef, sourceTableDef);
+        });
+    }
+
+    void syncPageFromTable(TableRef tableRef) {
+        TableState tableState = state.tableStates.get(tableRef);
+        TableDefinition tableDefinition = state.tableDefinitions.get(tableRef);
+
+        List<String> hashedColumns = hashedColumns(tableRef);
         List<String> cursors = getCursors(tableRef);
 
         log.log(new BeginSelectPage(tableRef));
@@ -116,7 +132,7 @@ public class Updater {
                 if (rowsWritten++ == PAGE_SIZE)
                     return;
             }
-            state.tables.get(tableRef).finishedImport = true;
+            state.tableStates.get(tableRef).finishedImport = true;
         }
     }
 
@@ -131,7 +147,7 @@ public class Updater {
 
     private List<String> getCursors(TableRef tableRef) {
         List<String> cursors = new ArrayList<>();
-        Optional<Map<String, String>> maybeLastSyncedPrimaryKey = state.tables.get(tableRef).lastSyncedPrimaryKey;
+        Optional<Map<String, String>> maybeLastSyncedPrimaryKey = state.tableStates.get(tableRef).lastSyncedPrimaryKey;
         if (!maybeLastSyncedPrimaryKey.isPresent())
             return cursors;
 
@@ -144,28 +160,19 @@ public class Updater {
         return cursors;
     }
 
-
-    private void syncFromBinlog() throws Exception {
-        syncFromBinlog(null);
-    }
-
     void syncFromBinlog(BinlogPosition target) throws Exception {
         BinlogPosition startingPosition = state.binlogPosition;
 
-        // TODO what happens when you have a lot of activity on tables not present in state?
-        // we should be checking if these are tables we even care about? AKA std config
         try (EventReader eventReader = mysql.readSourceLog.events(startingPosition)) {
             while (true) {
                 SourceEvent sourceEvent = eventReader.readEvent();
                 state.binlogPosition = sourceEvent.binlogPosition;
 
                 if (desirable(sourceEvent)) {
-                    if (!state.tables.containsKey(sourceEvent.tableRef)) {
-                        updateTableDefinitions();
+                    if (!state.tableStates.containsKey(sourceEvent.tableRef)) {
+                        updateStateTableInfo();
                         return;
                     }
-
-                    // todo: in cases when we cannot reconcile table definitions, error out and print message to resync table
                     switch (sourceEvent.event) {
                         case INSERT:
                             emitFromInsert(sourceEvent);
@@ -179,14 +186,12 @@ public class Updater {
                         default:
                             throw new RuntimeException("Unexpected case: " + sourceEvent.event);
                     }
-
                 } else {
                     out.emitEvent(Event.createNop(), state);
 
-                    if (sourceEvent.event == SourceEventType.TIMEOUT && state.tables.values().stream().anyMatch(tableState -> !tableState.finishedImport))
+                    if (sourceEvent.event == SourceEventType.TIMEOUT && state.tableStates.values().stream().anyMatch(tableState -> !tableState.finishedImport))
                         return;
                 }
-
                 if (target != null && sourceEvent.binlogPosition.equals(target))
                     return;
             }
@@ -198,25 +203,20 @@ public class Updater {
         return sourceEvent.event != SourceEventType.TIMEOUT
                 && sourceEvent.event != SourceEventType.OTHER
                 && config.selectable(sourceEvent.tableRef);
-
     }
 
     private void emitFromInsert(SourceEvent event) {
         for (Row row : event.newRows) {
-            if (tablesToSync.get(event.tableRef).columns.size() != row.getColumnCount()) {
-                updateTableDefinitions();
-                out.emitEvent(Event.createTableDefinition(tablesToSync.get(event.tableRef)), state);
-            }
+            if (state.tableDefinitions.get(event.tableRef).columns.size() != row.getColumnCount())
+                updateStateTableInfo();
             out.emitEvent(Event.createUpsert(event.tableRef, row), state);
         }
     }
 
     private void emitFromUpdate(SourceEvent event) {
         for (int i = 0; i < event.oldRows.size(); ++i) {
-            if (tablesToSync.get(event.tableRef).columns.size() != event.oldRows.get(i).getColumnCount()) {
-                updateTableDefinitions();
-                out.emitEvent(Event.createTableDefinition(tablesToSync.get(event.tableRef)), state);
-            }
+            if (state.tableDefinitions.get(event.tableRef).columns.size() != event.oldRows.get(i).getColumnCount())
+                updateStateTableInfo();
             out.emitEvent(Event.createDelete(event.tableRef, event.oldRows.get(i)), state);
             out.emitEvent(Event.createUpsert(event.tableRef, event.newRows.get(i)), state);
         }
@@ -224,20 +224,10 @@ public class Updater {
 
     private void emitFromDelete(SourceEvent event) {
         for (Row row : event.newRows) {
-            if (tablesToSync.get(event.tableRef).columns.size() != row.getColumnCount()) {
-                updateTableDefinitions();
-                out.emitEvent(Event.createTableDefinition(tablesToSync.get(event.tableRef)), state);
-            }
+            if (state.tableDefinitions.get(event.tableRef).columns.size() != row.getColumnCount())
+                updateStateTableInfo();
             out.emitEvent(Event.createDelete(event.tableRef, row), state);
         }
-    }
-
-    void updateTableDefinitions() {
-        Map<TableRef, TableDefinition> allSourceTables = mysql.tableDefinitions.get();
-
-        tablesToSync = config.getTablesToSync(allSourceTables);
-
-        updateState(tablesToSync.keySet());
     }
 
     private List<String> hashedColumns(TableRef tableRef) {

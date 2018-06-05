@@ -18,7 +18,7 @@ public class BatchUpdater extends Updater {
 
     @Override
     public void update() throws Exception {
-        updateTableDefinitions();
+        updateState();
 
         do {
             sync();
@@ -29,25 +29,13 @@ public class BatchUpdater extends Updater {
     void sync() throws Exception {
         TableRef tableToImport = findTableToImport();
 
-        // Record binlog position prior to beginning sync, to guarantee we capture every event that's occurred
-        // since the beginning of the sync
-        BinlogPosition target = mysql.readSourceLog.currentPosition();
-
         if (tableToImport != null)
-            syncPageFromTable(tablesToSync.get(tableToImport));
+            syncPageFromTable(tableToImport);
 
-        syncFromBinlog(target);
+        syncFromBinlog(mysql.readSourceLog.currentPosition());
     }
 
-    @Override
-    void updateTableDefinitions() {
-        super.updateTableDefinitions();
-
-        for (TableDefinition td : tablesToSync.values())
-            out.emitEvent(Event.createTableDefinition(td), state);
-    }
-
-        private boolean finishedImport() {
-        return state.tables.values().stream().allMatch(tableState -> tableState.finishedImport);
+    private boolean finishedImport() {
+        return state.tableStates.values().stream().allMatch(tableState -> tableState.finishedImport);
     }
 }

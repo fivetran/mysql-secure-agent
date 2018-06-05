@@ -22,7 +22,7 @@ import static org.junit.Assert.assertThat;
 // This is an integration test that expects a local MySQL database to be present.
 // Due to this dependency it is Ignored in automated tests. Run this manually when needed.
 @Ignore
-public class QueryDatabaseSpec {
+public class QueryDatabaseTest {
 
     private PrepareDatabase prepare;
     private QueryDatabase query;

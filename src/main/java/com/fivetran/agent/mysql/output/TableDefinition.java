@@ -5,15 +5,17 @@ package com.fivetran.agent.mysql.output;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fivetran.agent.mysql.deserialize.TableRefAsKeyDeserializer;
 import com.fivetran.agent.mysql.deserialize.TableRefDeserializer;
+import com.fivetran.agent.mysql.serialize.TableRefSerializer;
 import com.fivetran.agent.mysql.source.TableRef;
 
 import java.util.*;
 
 public class TableDefinition {
+    @JsonSerialize(using = TableRefSerializer.class)
     @JsonDeserialize(using = TableRefDeserializer.class)
-//    @JsonSerialize(using = TableRefSerializer.class)
     public TableRef table;
     @JsonProperty("tableDefinition")
     public List<ColumnDefinition> columns;
