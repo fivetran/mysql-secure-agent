@@ -18,7 +18,7 @@ import static javax.xml.bind.DatatypeConverter.parseHexBinary;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.equalTo;
 
-public class BinlogParserSpec {
+public class BinlogParserTest {
 
     // todo: add test that updates/deletes multiple rows
     // todo: add test that makes multiple inserts in the same query

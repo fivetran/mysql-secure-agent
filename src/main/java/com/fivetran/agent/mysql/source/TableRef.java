@@ -3,7 +3,7 @@
 **/
 package com.fivetran.agent.mysql.source;
 
-//@JsonDeserialize(using = TableRefDeserializer.class, as = )
+
 public class TableRef {
     public final String schema, name;
 
