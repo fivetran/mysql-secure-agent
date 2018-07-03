@@ -358,15 +358,15 @@ public class CaptureBinlogEvents {
                         break;
                     case WRITE:
                         if (event.getType() == EventType.EXT_WRITE_ROWS)
-                            event.printWriteBody(testInfo.getValue());
+                            event.printWriteBody(testInfo.getValue(), event.getType());
                         break;
                     case DELETE:
                         if (event.getType() == EventType.EXT_DELETE_ROWS)
-                            event.printWriteBody(testInfo.getValue());
+                            event.printWriteBody(testInfo.getValue(), event.getType());
                         break;
                     case UPDATE:
                         if (event.getType() == EventType.EXT_UPDATE_ROWS)
-                            event.printWriteBody(testInfo.getUpdateValue().get());
+                            event.printWriteBody(testInfo.getUpdateValue().get(), event.getType());
                         break;
                     case TABLEMAP:
                         if (event.getType() == EventType.EXT_WRITE_ROWS)
