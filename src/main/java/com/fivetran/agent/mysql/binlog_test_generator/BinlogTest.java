@@ -46,11 +46,10 @@ public class BinlogTest {
 
             return new LinkedList<BinlogTest>() {
                 {
-                    add(new BinlogTest(FULL_EVENT, "fullEvent", "INT", "2147483647", Optional.empty(), Optional.empty()));
+//                    add(new BinlogTest(FULL_EVENT, "fullEvent", "INT", "2147483647", Optional.empty(), Optional.empty()));
 //                    add(new BinlogTest(WRITE, "massiveString", "LONGTEXT", massiveString, Optional.empty(), Optional.empty()));
                     add(new BinlogTest(HEADER, "readHeader", "INT", "2147483647", Optional.empty(), Optional.empty()));
- //                     todo: tableMap tests will need to be fixed
-//                    add(new BinlogTest(TABLEMAP, "readTableMap", "INT", "2147483647", Optional.empty(), Optional.empty()));
+                    add(new BinlogTest(TABLEMAP, "readTableMap", "INT", "2147483647", Optional.empty(), Optional.empty()));
                     add(new BinlogTest(WRITE, "insertRow", "JSON", "'[1, \"a\"]'", Optional.empty(), Optional.empty()));
                     add(new BinlogTest(UPDATE, "updateRow", "VARCHAR(25)", "'foobarbazqux'", Optional.of("'xuqzabraboof'"), Optional.empty()));
                     add(new BinlogTest(DELETE, "deleteRow", "MEDIUMINT", "8388607", Optional.empty(), Optional.empty()));
@@ -174,14 +173,14 @@ public class BinlogTest {
                     add(new BinlogTest(WRITE, "maxTime", "TIME(6)", "'838:59:59.000000'", Optional.empty(), Optional.empty()));
                     add(new BinlogTest(WRITE, "nullTime", "TIME(6)", "null", Optional.empty(), Optional.empty()));
 
-                    add(new BinlogTest(WRITE, "minDatetime", "DATETIME(6)", "'1000-01-01 00:00:00.0000007'", Optional.empty(), Optional.empty()));
+                    add(new BinlogTest(WRITE, "minDatetime", "DATETIME(6)", "'1000-01-01 00:00:00.000001'", Optional.empty(), Optional.empty()));
                      add(new BinlogTest(WRITE, "regDatetime", "DATETIME(6)", "'1993-04-15 12:59:59.000007'", Optional.empty(), Optional.empty()));
                     add(new BinlogTest(WRITE, "maxDatetime", "DATETIME(6)", "'9999-12-31 23:59:59'", Optional.empty(), Optional.empty()));
                     add(new BinlogTest(WRITE, "nullDatetime", "DATETIME(6)", "null", Optional.empty(), Optional.empty()));
 
                     add(new BinlogTest(WRITE, "minTimestamp", "TIMESTAMP(6)", "'1970-01-01 00:00:01.000000'", Optional.empty(), Optional.empty()));
                     add(new BinlogTest(WRITE, "maxTimestamp", "TIMESTAMP(6)", "'2038-01-18 03:14:07.999999'", Optional.empty(), Optional.empty()));
-                    add(new BinlogTest(WRITE, "nullTimestamp", "TIMESTAMP(6)", "null", Optional.empty(), Optional.empty()));
+                    add(new BinlogTest(WRITE, "nullTimestamp", "TIMESTAMP(6) NULL", "null", Optional.empty(), Optional.empty()));
 
                     add(new BinlogTest(WRITE, "nullJson", "JSON", "null", Optional.empty(), Optional.empty()));
                     add(new BinlogTest(WRITE, "intJson", "JSON", "'1'", Optional.empty(), Optional.empty()));

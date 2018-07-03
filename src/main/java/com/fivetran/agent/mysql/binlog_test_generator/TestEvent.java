@@ -3,9 +3,15 @@
 **/
 package com.fivetran.agent.mysql.binlog_test_generator;
 
+import com.fivetran.agent.mysql.source.binlog.BinlogInputStream;
+import com.fivetran.agent.mysql.source.binlog.parser.EventBodyParser;
 import com.fivetran.agent.mysql.source.binlog.parser.EventType;
+import com.fivetran.agent.mysql.source.binlog.parser.TableMapEventBody;
 
 import java.io.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TestEvent {
 
@@ -154,14 +160,14 @@ public class TestEvent {
         System.out.println(sb.toString());
     }
 
-    void printWriteBody(String value) {
+    void printWriteBody(String value, EventType eventType) {
         StringBuilder sb = new StringBuilder();
 
         appendQuery(sb);
         appendTableMapBody(sb);
 
         sb.append("        byte[] modifyingEventHex = \nparseHexBinary(" + "\"" + getHex(body) + "\"" + ");\n");
-        sb.append("        ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);\n");
+        sb.append("        ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, " + eventType + ", tableMaps);\n");
         sb.append("        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row(" +
                 value.replaceAll("\"", "\\\\\\\"")
                         .replaceAll("'", "\"")
@@ -191,10 +197,9 @@ public class TestEvent {
         appendQuery(sb);
         appendTableMapBody(sb);
 
-        sb.append("        assertThat(tableMapEventBody.getTableId(), equalTo(" + getTableId() + "L));\n");
-        sb.append("        assertThat(tableMapEventBody.getTableRef().schema, equalTo(\"capture_binlog_events\"));\n");
-        sb.append("        assertThat(tableMapEventBody.getTableRef().name, equalTo(\"foo\"));\n");
-        sb.append("        assertThat(tableMapEventBody.getColumnTypes(), equalTo(new byte[] {0})); // todo: add appropriate types\n");
+        sb.append("        assertThat(tableMaps.get(" + getTableId() + ").getTableRef().schema, equalTo(\"capture_binlog_events\"));\n");
+        sb.append("        assertThat(tableMaps.get(" + getTableId() + ").getTableRef().name, equalTo(\"foo\"));\n");
+        sb.append("        assertThat(tableMaps.get(" + getTableId() + ").getColumnTypes(), equalTo(new byte[] {0})); // todo: add appropriate types\n");
         sb.append("    }\n");
         System.out.println(sb.toString());
     }
@@ -206,13 +211,9 @@ public class TestEvent {
         return sb.toString();
     }
 
-    private int getTableId() {
-        int result = 0;
-
-        for (int i = 0; i < 6; ++i)
-            result |= ((int) body[i] << (i << 3));
-
-        return result;
+    private long getTableId() {
+        BinlogInputStream bin = new BinlogInputStream(body);
+        return bin.readLong(6);
     }
 
     public void setTableMap(TestEvent tableMap) {

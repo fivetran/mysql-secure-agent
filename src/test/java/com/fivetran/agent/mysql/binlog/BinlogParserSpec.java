@@ -13,8 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.fivetran.agent.mysql.source.binlog.parser.EventType.EXT_WRITE_ROWS;
-import static com.fivetran.agent.mysql.source.binlog.parser.EventType.TABLE_MAP;
+import static com.fivetran.agent.mysql.source.binlog.parser.EventType.*;
 import static javax.xml.bind.DatatypeConverter.parseHexBinary;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -62,6 +61,21 @@ public class BinlogParserSpec {
     }
 
     @Test
+    public void readTableMap() throws IOException {
+        // Query: INSERT INTO capture_binlog_events.foo (readTableMap) VALUES (2147483647)
+
+        Map<Long, TableMapEventBody> tableMaps = new HashMap<>();
+
+        byte[] tableMapHex =
+                parseHexBinary("F70000000000010015636170747572655F62696E6C6F675F6576656E74730003666F6F0001030001");
+        bodyParser.parse(tableMapHex, TABLE_MAP, tableMaps);
+
+        assertThat(tableMaps.get(247L).getTableRef().schema, equalTo("capture_binlog_events"));
+        assertThat(tableMaps.get(247L).getTableRef().name, equalTo("foo"));
+        assertThat(tableMaps.get(247L).getColumnTypes(), equalTo(new byte[] {3}));
+    }
+
+    @Test
     public void insertRow() throws IOException {
         // Query: INSERT INTO capture_binlog_events.foo (insertRow) VALUES ('[1, "a"]')
 
@@ -89,7 +103,7 @@ public class BinlogParserSpec {
 
         byte[] modifyingEventHex =
                 parseHexBinary("1201000000000100020001FFFFFE0C666F6F62617262617A717578FE0C7875717A61627261626F6F66");
-        ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
+        ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_UPDATE_ROWS, tableMaps);
         assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("xuqzabraboof"))));
     }
 
@@ -105,7 +119,7 @@ public class BinlogParserSpec {
 
         byte[] modifyingEventHex =
                 parseHexBinary("1301000000000100020001FFFEFFFF7F");
-        ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
+        ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_DELETE_ROWS, tableMaps);
         assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("8388607"))));
     }
 
@@ -125,6 +139,7 @@ public class BinlogParserSpec {
         assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("aÃbڅcㅙdソe"))));
     }
 
+    // TODO investigate whether we can sync unique charsets
     @Test
     public void big5Charset() throws IOException {
         // Query: INSERT INTO capture_binlog_events.foo (big5Charset) VALUES ('什')
@@ -1420,7 +1435,7 @@ public class BinlogParserSpec {
         byte[] modifyingEventHex =
                 parseHexBinary("6501000000000100020001FFFE9976967E");
         ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
-        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("1.0E38]"))));
+        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("1.0E38"))));
     }
 
     @Test
@@ -1500,7 +1515,7 @@ public class BinlogParserSpec {
         byte[] modifyingEventHex =
                 parseHexBinary("6A01000000000100020001FFFE01");
         ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
-        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("1"))));
+        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("{0}"))));
     }
 
     @Test
@@ -1516,7 +1531,7 @@ public class BinlogParserSpec {
         byte[] modifyingEventHex =
                 parseHexBinary("6B01000000000100020001FFFE00");
         ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
-        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("0"))));
+        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("{}"))));
     }
 
     @Test
@@ -1564,7 +1579,7 @@ public class BinlogParserSpec {
         byte[] modifyingEventHex =
                 parseHexBinary("6E01000000000100020001FFFE01");
         ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
-        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("1"))));
+        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("{0}"))));
     }
 
     @Test
@@ -1631,6 +1646,7 @@ public class BinlogParserSpec {
         assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row(){{add(null);}})));
     }
 
+    // TODO shyiko essentially mods all hour values by 24. We may want to do the same in RowParser#parseTimeV2.
     @Test
     public void minTime() throws IOException {
         // Query: INSERT INTO capture_binlog_events.foo (minTime) VALUES ('-838:59:59.000000')
@@ -1697,18 +1713,18 @@ public class BinlogParserSpec {
 
     @Test
     public void minDatetime() throws IOException {
-        // Query: INSERT INTO capture_binlog_events.foo (minDatetime) VALUES ('1000-01-01 00:00:00.0000007')
+        // Query: INSERT INTO capture_binlog_events.foo (minDatetime) VALUES ('1000-01-01 00:00:00.000001')
 
         Map<Long, TableMapEventBody> tableMaps = new HashMap<>();
 
         byte[] tableMapHex =
-                parseHexBinary("770100000000010015636170747572655F62696E6C6F675F6576656E74730003666F6F000112010601");
+                parseHexBinary("FB0000000000010015636170747572655F62696E6C6F675F6576656E74730003666F6F000112010601");
         bodyParser.parse(tableMapHex, TABLE_MAP, tableMaps);
 
         byte[] modifyingEventHex =
-                parseHexBinary("7701000000000100020001FFFE8CB2420000000001");
+                parseHexBinary("FB00000000000100020001FFFE8CB2420000000001");
         ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
-        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("1000-01-01 00:00:00.0000007"))));
+        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("1000-01-01 00:00:00.000001"))));
     }
 
     @Test
@@ -1798,11 +1814,11 @@ public class BinlogParserSpec {
         Map<Long, TableMapEventBody> tableMaps = new HashMap<>();
 
         byte[] tableMapHex =
-                parseHexBinary("7D0100000000010015636170747572655F62696E6C6F675F6576656E74730003666F6F000111010600");
+                parseHexBinary("EC0000000000010015636170747572655F62696E6C6F675F6576656E74730003666F6F000111010601");
         bodyParser.parse(tableMapHex, TABLE_MAP, tableMaps);
 
         byte[] modifyingEventHex =
-                parseHexBinary("7D01000000000100020001FFFE5B075EAF064E83");
+                parseHexBinary("EC00000000000100020001FFFF");
         ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
         assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row(){{add(null);}})));
     }
