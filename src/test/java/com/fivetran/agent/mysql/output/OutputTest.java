@@ -31,7 +31,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 // TODO add test to check contents of state file
-public class OutputSpec {
+public class OutputTest {
     private Map<File, String> mockOutputFiles = new HashMap<>();
     //    private final int MAX_SIZE = 1024;
     private BucketClient mockClient = new BucketClient() {
@@ -88,49 +88,9 @@ public class OutputSpec {
     }
 
     @Test
-    public void writeOut_tableDefinitionEvent() throws IOException {
-        TableRef tableRef = new TableRef("test_schema", "test_table");
-        ImmutableList<ColumnDefinition> columnDefs = ImmutableList.of(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false));
-        List<String> fromColumns = columnDefs.stream().map(c -> c.name).collect(Collectors.toList());
-        List<String> toColumns = ImmutableList.of("referenced_id", "referenced_data");
-        Map<TableRef, ForeignKey> foreignKeys = ImmutableMap.of(new TableRef("test_schema", "test_referenced_table"), new ForeignKey(fromColumns, toColumns));
-        TableDefinition tableDef = new TableDefinition(tableRef, columnDefs, foreignKeys);
-
-        BucketOutput output = new BucketOutput(mockClient, 1);
-        output.emitEvent(Event.createTableDefinition(tableDef), state);
-        JsonNode tableDefJson = Main.JSON.readValue(getDataFile(), JsonNode.class);
-
-        ArrayNode columnsJson = (ArrayNode) tableDefJson.get("tableDefinition");
-        assertThat(tableDefJson.get("table").get("schema").asText(), equalTo("test_schema"));
-        assertThat(tableDefJson.get("table").get("name").asText(), equalTo("test_table"));
-
-        assertThat(columnsJson.get(0).get("name").asText(), equalTo("id"));
-        assertThat(columnsJson.get(0).get("type").asText(), equalTo("text"));
-        assertTrue(columnsJson.get(0).get("key").asBoolean());
-
-        assertThat(columnsJson.get(1).get("name").asText(), equalTo("data"));
-        assertThat(columnsJson.get(1).get("type").asText(), equalTo("text"));
-        assertFalse(columnsJson.get(1).get("key").asBoolean());
-
-        ArrayNode fromColumnsJson = (ArrayNode) tableDefJson.get("foreignKeys").get("test_schema.test_referenced_table").get("columns");
-        assertThat(fromColumnsJson.size(), equalTo(2));
-        assertThat(fromColumnsJson.get(0).asText(), equalTo("id"));
-        assertThat(fromColumnsJson.get(1).asText(), equalTo("data"));
-
-        ArrayNode toColumnsJson = (ArrayNode) tableDefJson.get("foreignKeys").get("test_schema.test_referenced_table").get("referencedColumns");
-        assertThat(toColumnsJson.size(), equalTo(2));
-        assertThat(toColumnsJson.get(0).asText(), equalTo("referenced_id"));
-        assertThat(toColumnsJson.get(1).asText(), equalTo("referenced_data"));
-
-
-    }
-
-    @Test
     public void writeOut_writeOnlyWhenMaxSizeExceeded() {
         BucketOutput output = new BucketOutput(mockClient, 100);
         TableRef tableRef = new TableRef("test_schema", "test_table");
-        ImmutableList<ColumnDefinition> columnDefs = ImmutableList.of(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false));
-        TableDefinition tableDef = new TableDefinition(tableRef, columnDefs);
 
         Row row = new Row("0", "1", "2");
 
@@ -138,7 +98,7 @@ public class OutputSpec {
 
         assertTrue(mockOutputFiles.isEmpty());
 
-        output.emitEvent(Event.createTableDefinition(tableDef), state);
+        output.emitEvent(Event.createUpsert(tableRef, row), state);
 
         assertFalse(mockOutputFiles.isEmpty());
     }
@@ -147,13 +107,10 @@ public class OutputSpec {
     public void writeOut_alwaysWriteOnFinish() {
         try (BucketOutput output = new BucketOutput(mockClient, 1_000_000)) {
             TableRef tableRef = new TableRef("test_schema", "test_table");
-            ImmutableList<ColumnDefinition> columnDefs = ImmutableList.of(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false));
-            TableDefinition tableDef = new TableDefinition(tableRef, columnDefs);
 
             Row row = new Row("0", "1", "2");
 
             output.emitEvent(Event.createUpsert(tableRef, row), state);
-            output.emitEvent(Event.createTableDefinition(tableDef), state);
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -168,7 +125,7 @@ public class OutputSpec {
 
         TableState tableState = new TableState();
         tableState.finishedImport = true;
-        state.tables.put(tableRef, new TableState());
+        state.tableStates.put(tableRef, new TableState());
         state.binlogPosition = new BinlogPosition("mysql-bin.000001", 154);
 
         output.emitEvent(Event.createUpsert(tableRef, new Row()), state);

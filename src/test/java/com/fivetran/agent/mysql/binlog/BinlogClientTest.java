@@ -13,6 +13,7 @@ import com.fivetran.agent.mysql.source.binlog.client.shyiko.Greeting;
 import com.fivetran.agent.mysql.source.binlog.parser.TableMapEventBody;
 import com.google.common.collect.ImmutableList;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.*;
@@ -22,7 +23,7 @@ import static javax.xml.bind.DatatypeConverter.parseHexBinary;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-public class BinlogClientSpec {
+public class BinlogClientTest {
 
     private static BinlogClient client;
 
@@ -59,20 +60,6 @@ public class BinlogClientSpec {
                         new BinlogPosition("binlog-file", 26442),
                         ImmutableList.of(new Row("2147483647"))
                 )));
-    }
-
-    @Test
-    public void update() throws Exception {
-        BinlogPosition startingPosition = new BinlogPosition("mysql-bin.000008", 4L);
-        List<SourceEvent> relevantEvents = new ArrayList<>();
-
-        try (EventReader eventReader = client.events(startingPosition)) {
-            while (true) {
-                SourceEvent sourceEvent = eventReader.readEvent();
-
-                relevantEvents.add(sourceEvent);
-            }
-        }
     }
 
     private class MockChannel implements PacketChannel {

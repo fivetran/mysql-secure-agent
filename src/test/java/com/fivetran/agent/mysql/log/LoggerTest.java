@@ -19,7 +19,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-public class LoggerSpec {
+public class LoggerTest {
     private List<String> logMessages = new ArrayList<>();
     private Logger logger = new Logger((byteBuffer -> logMessages.add(new String(byteBuffer.array()))));
 
