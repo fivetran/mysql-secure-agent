@@ -36,8 +36,8 @@ public class BinlogIntegrationSpec {
                 new DatabaseCredentials(
                         "localhost",
                         3306,
-                        "glarwood",
-                        "April!5!5"
+                        "",
+                        ""
                 );
 //                new DatabaseCredentials(
 //                        "",
