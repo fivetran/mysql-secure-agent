@@ -5,6 +5,7 @@ package com.fivetran.agent.mysql.source;
 
 import com.fivetran.agent.mysql.ImportTable;
 import com.fivetran.agent.mysql.Rows;
+import com.fivetran.agent.mysql.output.ColumnDefinition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.junit.Test;
@@ -21,14 +22,13 @@ public class ImportSourceTableTest {
 
     @Test
     public void firstPage() {
-
         MockQuery mock = new MockQuery();
         ImportTable importTable = new ImportSourceTable(mock);
 
         TableRef table = new TableRef("test_schema", "foo");
 
         ImportTable.PagingParams params = new ImportTable.PagingParams(ImmutableList.of("id"), ImmutableList.of(), 1000);
-        Rows rows = importTable.rows(table, ImmutableList.of("id", "data"), Optional.of(params));
+        Rows rows = importTable.rows(table, ImmutableList.of(new ColumnDefinition("id", "int", true), new ColumnDefinition("data", "text", false)), Optional.of(params));
 
         assertThat(mock.query, equalTo("SELECT `id`, `data`" +
                 " FROM `test_schema`.`foo`" +
@@ -40,14 +40,13 @@ public class ImportSourceTableTest {
 
     @Test
     public void nextPage() {
-
         MockQuery mock = new MockQuery();
         ImportTable importTable = new ImportSourceTable(mock);
 
         TableRef table = new TableRef("test_schema", "foo");
 
         ImportTable.PagingParams params = new ImportTable.PagingParams(ImmutableList.of("id"), ImmutableList.of("1234"), 1000);
-        Rows rows = importTable.rows(table, ImmutableList.of("id", "data"), Optional.of(params));
+        Rows rows = importTable.rows(table, ImmutableList.of(new ColumnDefinition("id", "int", true), new ColumnDefinition("data", "text", false)), Optional.of(params));
 
         assertThat(mock.query, equalTo("SELECT `id`, `data`" +
                 " FROM `test_schema`.`foo`" +
@@ -60,12 +59,11 @@ public class ImportSourceTableTest {
 
     @Test
     public void noPaging() {
-
         MockQuery mock = new MockQuery();
         ImportTable importTable = new ImportSourceTable(mock);
 
         TableRef table = new TableRef("test_schema", "foo");
-        Rows rows = importTable.rows(table, ImmutableList.of("data"), Optional.empty());
+        Rows rows = importTable.rows(table, ImmutableList.of(new ColumnDefinition("data", "text", false)), Optional.empty());
 
         assertThat(mock.query, equalTo("SELECT `data` FROM `test_schema`.`foo`"));
 
@@ -116,10 +114,19 @@ public class ImportSourceTableTest {
 
     @Test
     public void multiColumnPagingClause() {
-
         ImportTable.PagingParams params = new ImportTable.PagingParams(ImmutableList.of("a", "b"), ImmutableList.of("1", "2"), 1);
         String pagingClause = ImportSourceTable.pagingClause(params);
         assertThat(pagingClause, equalTo(" WHERE (`a` > '1') OR (`a` = '1' AND `b` > '2') ORDER BY `a`, `b` LIMIT 1"));
+    }
+
+    @Test
+    public void castTimeType() {
+        MockQuery mock = new MockQuery();
+        ImportTable importTable = new ImportSourceTable(mock);
+        TableRef table = new TableRef("test_schema", "foo");
+        importTable.rows(table, ImmutableList.of(new ColumnDefinition("time", "time", false)), Optional.empty());
+
+        assertThat(mock.query, equalTo("SELECT CAST(`time` AS CHAR) AS `time` FROM `test_schema`.`foo`"));
     }
 
     @Test
