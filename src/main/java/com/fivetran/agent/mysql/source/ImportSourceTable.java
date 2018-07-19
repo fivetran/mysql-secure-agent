@@ -5,7 +5,10 @@ package com.fivetran.agent.mysql.source;
 
 import com.fivetran.agent.mysql.ImportTable;
 import com.fivetran.agent.mysql.Rows;
+import com.fivetran.agent.mysql.output.ColumnDefinition;
+import com.google.common.base.Joiner;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,9 +23,9 @@ public class ImportSourceTable implements ImportTable {
     }
 
     @Override
-    public Rows rows(TableRef table, List<String> selectColumns, Optional<PagingParams> pagingParams) {
+    public Rows rows(TableRef table, List<ColumnDefinition> selectColumns, Optional<PagingParams> pagingParams) {
 
-        String select = "SELECT " + quoted(selectColumns)
+        String select = "SELECT " + columnToSelect(selectColumns)
                 + " FROM " + quoted(table)
                 + pagingParams.map(ImportSourceTable::pagingClause).orElse("");
 
@@ -79,6 +82,22 @@ public class ImportSourceTable implements ImportTable {
 
     private static String quoted(List<String> columns) {
         return columns.stream().map(ImportSourceTable::quoted).collect(joining(", "));
+    }
+
+    private String columnToSelect(List<ColumnDefinition> columns) {
+        List<String> colSpecs = new ArrayList<>();
+        for (ColumnDefinition c : columns) {
+            String colSpec;
+            switch (c.type) {
+                case "time":
+                    colSpec = "CAST(" + quoted(c.name) + " AS CHAR) AS " + quoted(c.name);
+                    break;
+                default:
+                    colSpec = quoted(c.name);
+            }
+            colSpecs.add(colSpec);
+        }
+        return Joiner.on(", ").join(colSpecs);
     }
 
 }

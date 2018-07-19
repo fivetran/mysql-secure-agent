@@ -110,7 +110,7 @@ public class Updater {
 
         ImportTable.PagingParams pagingParams = new ImportTable.PagingParams(orderByColumns, cursors, PAGE_SIZE);
         int rowsWritten = 0;
-        try (Rows rows = mysql.importTable.rows(tableRef, columnNames, Optional.of(pagingParams))) {
+        try (Rows rows = mysql.importTable.rows(tableRef, columnsToSync, Optional.of(pagingParams))) {
 
             List<Integer> keyIndices = getIndices(columnNames, orderByColumns);
             List<Integer> hashIndices = getIndices(columnNames, hashedColumns);

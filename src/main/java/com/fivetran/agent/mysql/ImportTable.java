@@ -3,6 +3,7 @@
 **/
 package com.fivetran.agent.mysql;
 
+import com.fivetran.agent.mysql.output.ColumnDefinition;
 import com.fivetran.agent.mysql.source.TableRef;
 
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.Optional;
 public interface ImportTable {
 
     Rows rows(TableRef table,
-              List<String> selectColumns,
+              List<ColumnDefinition> selectColumns,
               Optional<PagingParams> pagingParams);
 
     class PagingParams {
