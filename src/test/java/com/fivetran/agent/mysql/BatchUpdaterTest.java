@@ -330,8 +330,6 @@ public class BatchUpdaterTest {
         BatchUpdater updater = new BatchUpdater(config, api, out, logMessages::add, state);
 
         updater.update();
-
-        System.out.println();
     }
 
     private Row row(String... values) {
