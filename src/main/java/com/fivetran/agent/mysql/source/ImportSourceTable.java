@@ -88,7 +88,7 @@ public class ImportSourceTable implements ImportTable {
         List<String> colSpecs = new ArrayList<>();
         for (ColumnDefinition c : columns) {
             String colSpec;
-            if (c.type.matches("time(?:\\(\\d+\\))?"))
+            if (c.type.matches("time(\\(\\d+\\))?"))
                 colSpec = "CAST(" + quoted(c.name) + " AS CHAR) AS " + quoted(c.name);
             else
                 colSpec = quoted(c.name);
