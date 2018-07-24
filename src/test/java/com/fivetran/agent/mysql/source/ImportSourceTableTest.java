@@ -120,11 +120,21 @@ public class ImportSourceTableTest {
     }
 
     @Test
-    public void castTimeType() {
+    public void castTimeType_noModifier() {
         MockQuery mock = new MockQuery();
         ImportTable importTable = new ImportSourceTable(mock);
         TableRef table = new TableRef("test_schema", "foo");
         importTable.rows(table, ImmutableList.of(new ColumnDefinition("time", "time", false)), Optional.empty());
+
+        assertThat(mock.query, equalTo("SELECT CAST(`time` AS CHAR) AS `time` FROM `test_schema`.`foo`"));
+    }
+
+    @Test
+    public void castTimeType_withModifier() {
+        MockQuery mock = new MockQuery();
+        ImportTable importTable = new ImportSourceTable(mock);
+        TableRef table = new TableRef("test_schema", "foo");
+        importTable.rows(table, ImmutableList.of(new ColumnDefinition("time", "time(6)", false)), Optional.empty());
 
         assertThat(mock.query, equalTo("SELECT CAST(`time` AS CHAR) AS `time` FROM `test_schema`.`foo`"));
     }
