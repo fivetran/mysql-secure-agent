@@ -12,6 +12,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static com.fivetran.agent.mysql.source.binlog.parser.EventType.*;
@@ -1734,7 +1735,80 @@ public class BinlogParserTest {
         byte[] modifyingEventHex =
                 parseHexBinary("7301000000000100020001FFFE4B9105000000");
         ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
-        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("-838:59:59.000000"))));
+        List<Row> newRows = modifyingEventBody.getNewRows();
+        assertThat(newRows.size(), equalTo(1));
+        // directly test for null value in row to circumvent Objects.requireNonNull check in arraylist constructor
+        assertThat(newRows.get(0).get(0), equalTo(null));
+    }
+
+    @Test
+    public void negTime() throws IOException {
+        // Query: INSERT INTO capture_binlog_events.foo (negTime) VALUES ('-01:02:03.000000')
+
+        Map<Long, TableMapEventBody> tableMaps = new HashMap<>();
+
+        byte[] tableMapHex =
+                parseHexBinary("E60000000000010015636170747572655F62696E6C6F675F6576656E74730003666F6F000113010601");
+        bodyParser.parse(tableMapHex, TABLE_MAP, tableMaps);
+
+        byte[] modifyingEventHex =
+                parseHexBinary("E600000000000100020001FFFE7FEF7D000000");
+        ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
+        List<Row> newRows = modifyingEventBody.getNewRows();
+        assertThat(newRows.size(), equalTo(1));
+        // directly test for null value in row to circumvent Objects.requireNonNull check in arraylist constructor
+        assertThat(newRows.get(0).get(0), equalTo(null));
+    }
+
+    @Test
+    public void negTime2() throws IOException {
+        // Query: INSERT INTO capture_binlog_events.foo (negTime) VALUES ('-50:01:02.000000')
+
+        Map<Long, TableMapEventBody> tableMaps = new HashMap<>();
+
+        byte[] tableMapHex =
+                parseHexBinary("E70000000000010015636170747572655F62696E6C6F675F6576656E74730003666F6F000113010601");
+        bodyParser.parse(tableMapHex, TABLE_MAP, tableMaps);
+
+        byte[] modifyingEventHex =
+                parseHexBinary("E700000000000100020001FFFE7CDFBE000000");
+        ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
+        List<Row> newRows = modifyingEventBody.getNewRows();
+        assertThat(newRows.size(), equalTo(1));
+        // directly test for null value in row to circumvent Objects.requireNonNull check in arraylist constructor
+        assertThat(newRows.get(0).get(0), equalTo(null));
+    }
+
+    @Test
+    public void posTime() throws IOException {
+        // Query: INSERT INTO capture_binlog_events.foo (posTime) VALUES ('01:02:03.000000')
+
+        Map<Long, TableMapEventBody> tableMaps = new HashMap<>();
+
+        byte[] tableMapHex =
+                parseHexBinary("E80000000000010015636170747572655F62696E6C6F675F6576656E74730003666F6F000113010601");
+        bodyParser.parse(tableMapHex, TABLE_MAP, tableMaps);
+
+        byte[] modifyingEventHex =
+                parseHexBinary("E800000000000100020001FFFE801083000000");
+        ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
+        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("01:02:03.000000"))));
+    }
+
+    @Test
+    public void posTime2() throws IOException {
+        // Query: INSERT INTO capture_binlog_events.foo (posTime) VALUES ('50:01:02.000000')
+
+        Map<Long, TableMapEventBody> tableMaps = new HashMap<>();
+
+        byte[] tableMapHex =
+                parseHexBinary("E90000000000010015636170747572655F62696E6C6F675F6576656E74730003666F6F000113010601");
+        bodyParser.parse(tableMapHex, TABLE_MAP, tableMaps);
+
+        byte[] modifyingEventHex =
+                parseHexBinary("E900000000000100020001FFFE832042000000");
+        ModifyingEventBody modifyingEventBody = (ModifyingEventBody) bodyParser.parse(modifyingEventHex, EXT_WRITE_ROWS, tableMaps);
+        assertThat(modifyingEventBody.getNewRows(), equalTo(ImmutableList.of(new Row("50:01:02.000000"))));
     }
 
     @Test
