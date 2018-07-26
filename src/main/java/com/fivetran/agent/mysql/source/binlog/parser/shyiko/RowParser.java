@@ -244,6 +244,8 @@ public class RowParser {
     }
 
     private String parseTimeV2(int meta, BinlogInputStream inputStream) {
+        // The following comment was made in the original Shyiko library,
+        // and does not accurately represent the bit sequences for these values
         /*
             (in big endian)
 
@@ -259,6 +261,12 @@ public class RowParser {
         */
         long time = bigEndianLong(inputStream.read(THREE_BYTES), 0, 3);
         int fsp = parseFractionalSeconds(meta, inputStream);
+        int sign = bitSlice(time, 1, 1, 24);
+
+        assert sign == 0 || sign == 1;
+
+        if (sign == 1)
+            return null;
 
         int hour = bitSlice(time, 2, 10, 24);
         int minute = bitSlice(time, 12, 6, 24);
