@@ -20,6 +20,20 @@ public class TableDefinitions implements Supplier<Map<TableRef, TableDefinition>
         this.query = query;
     }
 
+    /**
+     * Carries out a query against the source database, which enumerates all columns and all relevant information
+     * about each column, such as names, table name, schema name, ordinal position, and any potential foreign key
+     * references.
+     *
+     * Note - Mysql column ordinal positions are 1-indexed, which is why we must subtract one
+     * from the ordinal position when inserting into the list containing all ColumnDefinitions.
+     *
+     * Multiple ColumnAttributes can exist for the same column. For instance, if a column has foreign keys
+     * pointing to two locations, it will have two ColumnAttributes which differ only in their "referencedColumn"
+     * field. Because we've already processed the referenced columns, we can grab the first column attribute without
+     * considering the others, as all other values are identical.
+     * @return a map from all tables to their complete set of columns.
+     */
     @Override
     public Map<TableRef, TableDefinition> get() {
         Map<TableRef, TableDefinition> tables = new HashMap<>();
@@ -38,12 +52,20 @@ public class TableDefinitions implements Supplier<Map<TableRef, TableDefinition>
                 });
             }
 
-            // we can just grab the first, since all we care about is name, type, and key, and those will never differ if there are multiple columns
-            ColumnDefinition columnDef = new ColumnDefinition(columnRef.columnName, columnAttributes.get(0).columnType, columnAttributes.get(0).primaryKey);
+            ColumnAttributes attributes = columnAttributes.get(0);
+            ColumnDefinition columnDef = new ColumnDefinition(columnRef.columnName, attributes.columnType, attributes.primaryKey);
 
             if (tableDefinition.columns.contains(columnDef))
                 return;
-            tableDefinition.columns.add(columnDef);
+            if (tableDefinition.columns.size() < attributes.ordinalPosition) {
+                ColumnDefinition[] biggerList = new ColumnDefinition[attributes.ordinalPosition];
+                for (int i = 0; i < tableDefinition.columns.size(); i++) {
+                    biggerList[i] = tableDefinition.columns.get(i);
+                }
+                biggerList[attributes.ordinalPosition - 1] = columnDef;
+                tableDefinition.columns = new ArrayList<>(Arrays.asList(biggerList));
+            } else
+                tableDefinition.columns.set(attributes.ordinalPosition - 1, columnDef);
         });
         return tables;
     }
