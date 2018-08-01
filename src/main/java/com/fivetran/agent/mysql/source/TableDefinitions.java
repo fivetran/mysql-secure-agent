@@ -52,20 +52,11 @@ public class TableDefinitions implements Supplier<Map<TableRef, TableDefinition>
                 });
             }
 
-            ColumnAttributes attributes = columnAttributes.get(0);
-            ColumnDefinition columnDef = new ColumnDefinition(columnRef.columnName, attributes.columnType, attributes.primaryKey);
+            ColumnDefinition columnDef = new ColumnDefinition(columnRef.columnName, columnAttributes.get(0).columnType, columnAttributes.get(0).primaryKey);
 
             if (tableDefinition.columns.contains(columnDef))
                 return;
-            if (tableDefinition.columns.size() < attributes.ordinalPosition) {
-                ColumnDefinition[] biggerList = new ColumnDefinition[attributes.ordinalPosition];
-                for (int i = 0; i < tableDefinition.columns.size(); i++) {
-                    biggerList[i] = tableDefinition.columns.get(i);
-                }
-                biggerList[attributes.ordinalPosition - 1] = columnDef;
-                tableDefinition.columns = new ArrayList<>(Arrays.asList(biggerList));
-            } else
-                tableDefinition.columns.set(attributes.ordinalPosition - 1, columnDef);
+            tableDefinition.columns.add(columnDef);
         });
         return tables;
     }
@@ -113,7 +104,7 @@ public class TableDefinitions implements Supplier<Map<TableRef, TableDefinition>
 
         List<Record> records = query.records(selectTableColumnAttributes);
 
-        Map<ColumnRef, List<ColumnAttributes>> allColumnAttributes = new HashMap<>();
+        Map<ColumnRef, List<ColumnAttributes>> allColumnAttributes = new LinkedHashMap<>();
         for (Record record : records) {
 
             ColumnRef column = new ColumnRef(
