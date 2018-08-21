@@ -16,6 +16,7 @@ import com.fivetran.agent.mysql.source.binlog.client.EventReader;
 import com.fivetran.agent.mysql.state.AgentState;
 import com.fivetran.agent.mysql.state.TableState;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -188,6 +189,29 @@ public class UpdaterTest {
         assertTrue(state.tableDefinitions.get(existingTableRef).equals(existingTableDef));
         assertTrue(state.tableDefinitions.get(newTableRef).equals(newTableDef));
         assertTrue(state.binlogPosition.equals(shouldBeInState));
+    }
+
+    @Test
+    public void removeLostTablesFromState() {
+        TableRef tableRef = new TableRef("schema", "sync_table");
+        TableRef lostTable = new TableRef("schema", "lost_table");
+        AgentState state = new AgentState();
+
+        state.tableStates.put(lostTable, new TableState());
+
+
+        Updater updater = new Updater(config, api, out, logMessages::add, state);
+
+        Row row1 = row("1", "foo-1"), row2 = row("2", "foo-2");
+        readRows = ImmutableList.of(row1, row2);
+
+        TableDefinition tableDef = new TableDefinition(tableRef, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
+        tableDefinitions.put(tableRef, tableDef);
+
+        updater.updateState();
+
+        assertTrue(state.tableStates.size() == 1);
+        assertTrue(state.tableStates.containsKey(tableRef));
     }
 
     private Row row(String... values) {

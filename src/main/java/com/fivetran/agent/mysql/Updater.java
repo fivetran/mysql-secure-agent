@@ -16,6 +16,7 @@ import com.fivetran.agent.mysql.source.binlog.client.EventReader;
 import com.fivetran.agent.mysql.state.AgentState;
 import com.fivetran.agent.mysql.state.TableState;
 import com.fivetran.agent.mysql.utils.AgentUtils;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 import java.util.*;
@@ -83,7 +84,7 @@ public class Updater {
             state.tableDefinitions.put(t, tablesToSync.get(t));
         });
 
-        Set<TableRef> lostTables = Sets.difference(state.tableStates.keySet(), tablesToSync.keySet());
+        Set<TableRef> lostTables = Sets.difference(ImmutableSet.copyOf(state.tableStates.keySet()), tablesToSync.keySet());
         lostTables.forEach(t -> {
             state.tableStates.remove(t);
             state.tableDefinitions.remove(t);
