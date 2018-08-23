@@ -193,7 +193,7 @@ public class Updater {
                     if (sourceEvent.event == SourceEventType.TIMEOUT && state.tableStates.values().stream().anyMatch(tableState -> !tableState.finishedImport))
                         return;
                 }
-                if (target != null && sourceEvent.binlogPosition.equals(target))
+                if (target != null && target.equals(sourceEvent.binlogPosition))
                     return;
             }
         }
