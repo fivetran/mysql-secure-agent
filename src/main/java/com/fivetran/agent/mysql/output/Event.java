@@ -20,6 +20,7 @@ public class Event {
 
     public final Optional<Upsert> upsert;
     public final Optional<Delete> delete;
+    public final Optional<BeginTable> beginTable;
 
     public static Event createBeginTable(TableRef tableRef) {
         return new Event(new BeginTable(tableRef));
@@ -43,6 +44,7 @@ public class Event {
 
     private Event(BeginTable beginTable) {
         this.tableRef = beginTable.table;
+        this.beginTable = Optional.of(beginTable);
         this.upsert = Optional.empty();
         this.delete = Optional.empty();
         this.eventType = BEGIN_TABLE;
@@ -50,6 +52,7 @@ public class Event {
 
     private Event(Upsert upsert) {
         this.tableRef = upsert.table;
+        this.beginTable = Optional.empty();
         this.upsert = Optional.of(upsert);
         this.delete = Optional.empty();
         this.eventType = UPSERT;
@@ -57,6 +60,7 @@ public class Event {
 
     private Event(Delete delete) {
         this.tableRef = delete.table;
+        this.beginTable = Optional.empty();
         this.upsert = Optional.empty();
         this.delete = Optional.of(delete);
         this.eventType = DELETE;
@@ -64,6 +68,7 @@ public class Event {
 
     private Event() {
         this.tableRef = new TableRef("", "");
+        this.beginTable = Optional.empty();
         this.upsert = Optional.empty();
         this.delete = Optional.empty();
         this.eventType = NOP;

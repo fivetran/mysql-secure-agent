@@ -88,6 +88,18 @@ public class OutputTest {
     }
 
     @Test
+    public void writeOut_beginTableEvent() throws IOException {
+        TableRef tableRef = new TableRef("test_schema", "test_table");
+
+        BucketOutput output = new BucketOutput(mockClient, 1);
+        output.emitEvent(Event.createBeginTable(tableRef), state);
+
+        JsonNode beginTableJson = Main.JSON.readValue(getDataFile(), JsonNode.class);
+        assertThat(beginTableJson.get("begin_table").get("schema").asText(), equalTo("test_schema"));
+        assertThat(beginTableJson.get("begin_table").get("name").asText(), equalTo("test_table"));
+    }
+
+    @Test
     public void writeOut_writeOnlyWhenMaxSizeExceeded() {
         BucketOutput output = new BucketOutput(mockClient, 100);
         TableRef tableRef = new TableRef("test_schema", "test_table");

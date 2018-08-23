@@ -56,6 +56,7 @@ public class BucketOutput implements Output {
             switch (event.eventType) {
                 case DELETE:
                 case UPSERT:
+                case BEGIN_TABLE:
                     writeToBuffer(event);
                     break;
                 case NOP:
@@ -80,6 +81,10 @@ public class BucketOutput implements Output {
     private String getRowAsString(Event event) throws JsonProcessingException {
         String rowAsString;
         switch (event.eventType) {
+            case BEGIN_TABLE:
+                rowAsString = JSON.writeValueAsString(event.beginTable.orElseThrow(() ->
+                        new RuntimeException("BeginTable object was not instantiated in Event class")));
+                break;
             case UPSERT:
                 rowAsString = JSON.writeValueAsString(event.upsert.orElseThrow(() ->
                         new RuntimeException("Upsert object was not instantiated in Event class")));

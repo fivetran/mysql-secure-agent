@@ -24,7 +24,6 @@ public class BeginTable {
     }
 
     public BeginTable(TableRef beginTable) {
-
         this.table = beginTable;
     }
 }
