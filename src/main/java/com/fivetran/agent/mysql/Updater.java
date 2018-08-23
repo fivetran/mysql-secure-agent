@@ -219,6 +219,7 @@ public class Updater {
             if (state.tableDefinitions.get(event.tableRef).columns.size() != event.oldRows.get(i).getColumnCount()) {
                 updateStateTableInfo();
                 state.tableStates.put(event.tableRef, new TableState());
+                out.emitEvent(Event.createBeginTable(event.tableRef), state);
             }
             out.emitEvent(Event.createDelete(event.tableRef, event.oldRows.get(i)), state);
             out.emitEvent(Event.createUpsert(event.tableRef, event.newRows.get(i)), state);

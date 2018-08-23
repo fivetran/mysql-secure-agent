@@ -21,8 +21,12 @@ public class Event {
     public final Optional<Upsert> upsert;
     public final Optional<Delete> delete;
 
+    public static Event createBeginTable(TableRef tableRef) {
+        return new Event(new BeginTable(tableRef));
+    }
+
     public enum EventType {
-        UPSERT, DELETE, NOP
+        BEGIN_TABLE, UPSERT, DELETE, NOP
     }
 
     public static Event createNop() {
@@ -35,6 +39,13 @@ public class Event {
 
     public static Event createDelete(TableRef tableRef, List<String> row) {
         return new Event(new Delete(tableRef, row));
+    }
+
+    private Event(BeginTable beginTable) {
+        this.tableRef = beginTable.table;
+        this.upsert = Optional.empty();
+        this.delete = Optional.empty();
+        this.eventType = BEGIN_TABLE;
     }
 
     private Event(Upsert upsert) {
