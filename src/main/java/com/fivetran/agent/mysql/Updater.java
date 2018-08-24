@@ -208,8 +208,11 @@ public class Updater {
 
     private void emitFromInsert(SourceEvent event) {
         for (Row row : event.newRows) {
-            if (state.tableDefinitions.get(event.tableRef).columns.size() != row.getColumnCount())
+            if (state.tableDefinitions.get(event.tableRef).columns.size() != row.getColumnCount()) {
                 updateStateTableInfo();
+                state.tableStates.put(event.tableRef, new TableState());
+                out.emitEvent(Event.createBeginTable(event.tableRef), state);
+            }
             out.emitEvent(Event.createUpsert(event.tableRef, row), state);
         }
     }
