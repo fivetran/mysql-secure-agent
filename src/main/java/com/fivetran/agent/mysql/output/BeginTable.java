@@ -3,11 +3,13 @@ package com.fivetran.agent.mysql.output;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fivetran.agent.mysql.source.TableRef;
 
+import java.time.Instant;
 import java.util.Objects;
 
 public class BeginTable {
     @JsonProperty("begin_table")
     public final TableRef table;
+    public final Instant timestamp;
 
     @Override
     public boolean equals(Object o) {
@@ -23,7 +25,8 @@ public class BeginTable {
         return Objects.hash(table);
     }
 
-    public BeginTable(TableRef beginTable) {
+    public BeginTable(TableRef beginTable, Instant timestamp) {
         this.table = beginTable;
+        this.timestamp = timestamp;
     }
 }
