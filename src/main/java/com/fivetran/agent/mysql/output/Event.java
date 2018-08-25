@@ -6,7 +6,6 @@ package com.fivetran.agent.mysql.output;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fivetran.agent.mysql.source.TableRef;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -24,7 +23,7 @@ public class Event {
     public final Optional<BeginTable> beginTable;
 
     public static Event createBeginTable(TableRef tableRef) {
-        return new Event(new BeginTable(tableRef, Instant.now()));
+        return new Event(new BeginTable(tableRef));
     }
 
     public enum EventType {
