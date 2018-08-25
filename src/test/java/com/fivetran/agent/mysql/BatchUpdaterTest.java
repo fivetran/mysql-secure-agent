@@ -30,6 +30,7 @@ public class BatchUpdaterTest {
     private Config config = new Config();
     private List<Row> readRows = new ArrayList<>();
     private List<SourceEvent> sourceEvents = new ArrayList<>();
+    private Iterator<SourceEvent> sourceEventIterator;
     private Rows rows = new Rows() {
         @Override
         public List<String> columnNames() {
@@ -57,12 +58,11 @@ public class BatchUpdaterTest {
 
         @Override
         public EventReader events(BinlogPosition startPosition) {
-            Iterator<SourceEvent> sourceEventIterable = sourceEvents.iterator();
             return new EventReader() {
                 @Override
                 public SourceEvent readEvent() {
-                    if (sourceEventIterable.hasNext())
-                        return sourceEventIterable.next();
+                    if (sourceEventIterator.hasNext())
+                        return sourceEventIterator.next();
                     else
                         return SourceEvent.createTimeout(binlogPosition);
                 }
@@ -179,6 +179,11 @@ public class BatchUpdaterTest {
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, Arrays.asList("jUdn9gOx372QFiYR9zRyZp0VQEw=", "foo-2"))));
     }
 
+    /* Note - in real operation, this test would re-import the table. But the test components we're using
+     * aren't as smart as the real updater, and don't actually supply the records for the re-import.
+     * For this test, it is sufficient to test that we upsert all the incremental rows and include a begin_table
+     * event. Other tests will ensure the correctness of the table re-import mechanism.
+     */
     @Test
     public void binlogSync_updateTableDefinition() throws Exception {
         TableRef tableRef = new TableRef("test_schema", "test_table");
@@ -210,13 +215,15 @@ public class BatchUpdaterTest {
         SourceEvent modifiedEvent = SourceEvent.createInsert(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 3L), ImmutableList.of(modifiedRow));
         sourceEvents = ImmutableList.of(standardEvent, modifiedEvent);
         binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 4L);
-
+        sourceEventIterator = sourceEvents.iterator();
         new BatchUpdater(config, customApi, out, logMessages::add, state).update();
 
-        assertEquals(outEvents.size(), 3);
+        // First upsert occurs as part of normal binlog processing
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, standardRow)));
+        // Create begin table occurs because table definition changed and we must resync
+        assertTrue(outEvents.contains(Event.createBeginTable(tableRef)));
+        // Second upsert occurs when we sync the record with the extra column
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, modifiedRow)));
-        assertTrue(outEvents.contains(Event.createNop()));
     }
 
     @Test
