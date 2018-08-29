@@ -53,11 +53,11 @@ public class SourceEvent {
         if (this.oldRows != null && that.oldRows == null) return false;
         if (this.newRows == null && that.newRows != null) return false;
         if (this.newRows != null && that.newRows == null) return false;
-        if (this.oldRows != null && that.oldRows != null) {
+        if (this.oldRows != null) {
             if (!this.oldRows.equals(that.oldRows)) return false;
         }
-        if (this.newRows != null && that.newRows != null) {
-            if (!this.newRows.equals(that.newRows)) return false;
+        if (this.newRows != null) {
+            return this.newRows.equals(that.newRows);
         }
         return true;
     }
