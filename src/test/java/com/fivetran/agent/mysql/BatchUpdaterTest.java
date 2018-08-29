@@ -30,7 +30,7 @@ public class BatchUpdaterTest {
     private Config config = new Config();
     private List<Row> readRows = new ArrayList<>();
     private List<SourceEvent> sourceEvents = new ArrayList<>();
-    private Iterator<SourceEvent> sourceEventIterator;
+    private Iterator<SourceEvent> sourceEventIterator = sourceEvents.iterator();
     private Rows rows = new Rows() {
         @Override
         public List<String> columnNames() {
@@ -148,6 +148,7 @@ public class BatchUpdaterTest {
         SourceEvent event2 = SourceEvent.createInsert(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 3L), ImmutableList.of(row4));
         binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 4L);
         sourceEvents = ImmutableList.of(event1, event2);
+        sourceEventIterator = sourceEvents.iterator();
 
         BatchUpdater incrementalUpdate = new BatchUpdater(config, api, out, logMessages::add, state);
         incrementalUpdate.update();
@@ -250,6 +251,7 @@ public class BatchUpdaterTest {
         SourceEvent delete = SourceEvent.createDelete(tableRef, new BinlogPosition("mysql-bin-changelog.000001", 6L), ImmutableList.of(updatedRow));
 
         sourceEvents = ImmutableList.of(insert, other1, update, other2, delete);
+        sourceEventIterator = sourceEvents.iterator();
         binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 7L);
 
         new BatchUpdater(config, api, out, logMessages::add, state).update();
