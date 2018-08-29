@@ -284,34 +284,30 @@ public class BatchUpdaterTest {
         config.schemas.get("ignored_schema").tables.put("ignored_table", new TableConfig());
         config.schemas.get("ignored_schema").tables.get("ignored_table").selected = false;
 
+        TableDefinition tableDef = new TableDefinition(selectedTable, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
+        TableState tableState = new TableState();
+        tableState.finishedImport = true;
+        state.tableStates.put(selectedTable, tableState);
+        state.tableDefinitions.put(selectedTable, tableDef);
+
         Row row1 = row("1", "foo-1"), row2 = row("2", "foo-2"), row3 = row("3", "foo-3");
 
         SourceEvent insertIgnoredTable = SourceEvent.createInsert(ignoredTable, new BinlogPosition("mysql-bin-changelog.000001", 2L), ImmutableList.of(row1));
         SourceEvent insertIgnoredSchema = SourceEvent.createInsert(ignoredSchema, new BinlogPosition("mysql-bin-changelog.000001", 3L), ImmutableList.of(row2));
         SourceEvent insertSelectedTable = SourceEvent.createInsert(selectedTable, new BinlogPosition("mysql-bin-changelog.000001", 4L), ImmutableList.of(row3));
         sourceEvents = ImmutableList.of(insertIgnoredTable, insertIgnoredSchema, insertSelectedTable);
+        sourceEventIterator = sourceEvents.iterator();
         binlogPosition = new BinlogPosition("mysql-bin-changelog.000001", 5L);
 
-        TableDefinition tableDef = new TableDefinition(selectedTable, Arrays.asList(new ColumnDefinition("id", "text", true), new ColumnDefinition("data", "text", false)));
 
-        Supplier<Map<TableRef, TableDefinition>> updatableTableDefinitions = () -> {
-            if (outEvents.size() == 0)
-                return Collections.emptyMap();
-            else
-                return Collections.singletonMap(selectedTable, tableDef);
-        };
+        Supplier<Map<TableRef, TableDefinition>> updatableTableDefinitions = () -> Collections.singletonMap(selectedTable, tableDef);
 
         MysqlApi customApi = new MysqlApi(importTable, null, null, updatableTableDefinitions, read);
 
         new BatchUpdater(config, customApi, out, logMessages::add, state).update();
 
-        assertEquals(outEvents.size(), 6);
+        assertEquals(outEvents.size(), 4);
 
-        // First binlog sync
-        assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredTable
-        assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredSchema
-
-        // Second binlog sync
         assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredTable
         assertTrue(outEvents.contains(Event.createNop()));  // insertIgnoredSchema
         assertTrue(outEvents.contains(Event.createUpsert(selectedTable, row3)));  // insertSelectedTable
