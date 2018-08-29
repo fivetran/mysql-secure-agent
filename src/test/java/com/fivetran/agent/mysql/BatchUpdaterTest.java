@@ -267,7 +267,7 @@ public class BatchUpdaterTest {
     // TODO test for what should happen when SchemaConfig selected = false, but selectOtherTables = true
     // TODO maybe play around with this test so that it will import the table after doing a binlog sync
     @Test
-    public void update_onlySyncSelectedTablesFoundInBinglog() throws Exception {
+    public void update_onlySyncSelectedTablesFoundInBinlog() throws Exception {
         TableRef selectedTable = new TableRef("selected_schema", "selected_table");
         TableRef ignoredTable = new TableRef("selected_schema", "ignored_table");
         TableRef ignoredSchema = new TableRef("ignored_schema", "ignored_table");
