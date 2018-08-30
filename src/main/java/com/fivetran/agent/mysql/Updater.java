@@ -82,6 +82,7 @@ public class Updater {
         newTables.forEach(t -> {
             state.tableStates.put(t, new TableState());
             state.tableDefinitions.put(t, tablesToSync.get(t));
+            out.emitEvent(Event.createBeginTable(t), state);
         });
 
         Set<TableRef> lostTables = Sets.difference(ImmutableSet.copyOf(state.tableStates.keySet()), tablesToSync.keySet());
