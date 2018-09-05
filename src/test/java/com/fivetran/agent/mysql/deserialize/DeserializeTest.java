@@ -3,11 +3,13 @@
  **/
 package com.fivetran.agent.mysql.deserialize;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fivetran.agent.mysql.config.ColumnConfig;
 import com.fivetran.agent.mysql.config.Config;
 import com.fivetran.agent.mysql.config.SchemaConfig;
 import com.fivetran.agent.mysql.config.TableConfig;
 import com.fivetran.agent.mysql.credentials.Credentials;
+import com.fivetran.agent.mysql.output.BeginTable;
 import com.fivetran.agent.mysql.output.ColumnDefinition;
 import com.fivetran.agent.mysql.output.ForeignKey;
 import com.fivetran.agent.mysql.source.TableRef;
@@ -15,6 +17,7 @@ import com.fivetran.agent.mysql.state.AgentState;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -161,26 +164,40 @@ public class DeserializeTest {
                 "  \"cryptoSalt\": \"salzig\"\n" +
                 "}";
         Config config = Deserialize.deserialize(new ByteArrayInputStream(configString.getBytes()), Config.class);
-        assertThat(config.cryptoSalt, equalTo("salzig"));
-        assertThat(config.selectOtherSchemas, equalTo(false));
+        assertEquals(config.cryptoSalt, "salzig");
+        assertFalse(config.selectOtherSchemas);
 
         SchemaConfig schemaOne = config.schemas.get("schema_one");
-        assertThat(schemaOne.selectOtherTables, equalTo(false));
-        assertThat(schemaOne.selected, equalTo(false));
+        assertFalse(schemaOne.selectOtherTables);
+        assertFalse(schemaOne.selected);
 
         TableConfig tableOne = schemaOne.tables.get("table_one");
-        assertThat(tableOne.selectOtherColumns, equalTo(false));
-        assertThat(tableOne.selected, equalTo(false));
+        assertFalse(tableOne.selectOtherColumns);
+        assertFalse(tableOne.selected);
 
         ColumnConfig columnOne = tableOne.columns.get("column_one");
-        assertThat(columnOne.hash, equalTo(true));
-        assertThat(columnOne.implicitKey, equalTo(Optional.of(true)));
-        assertThat(columnOne.selected, equalTo(false));
+        assertTrue(columnOne.hash);
+        assertEquals(columnOne.implicitKey, Optional.of(true));
+        assertFalse(columnOne.selected);
     }
 
     @Test
     public void deserializeEmptyConfig() {
         Config config = Deserialize.deserialize(new ByteArrayInputStream("".getBytes()), Config.class);
         assertThat(config, equalTo(new Config()));
+    }
+
+    @Test
+    public void deserializeBeginTable() throws IOException {
+        String beginTableString = "{\n" +
+                "    \"begin_table\": {\n" +
+                "        \"name\": \"test_table\",\n" +
+                "        \"schema\": \"test_schema\"\n" +
+                "    }\n" +
+                "}";
+        ObjectMapper mapper = new ObjectMapper();
+        BeginTable beginTable = mapper.readValue(beginTableString, BeginTable.class);
+        assertEquals(beginTable.table.name, "test_table");
+        assertEquals(beginTable.table.schema, "test_schema");
     }
 }
