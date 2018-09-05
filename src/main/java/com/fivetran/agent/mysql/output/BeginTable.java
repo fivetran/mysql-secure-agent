@@ -2,8 +2,6 @@ package com.fivetran.agent.mysql.output;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fivetran.agent.mysql.deserialize.TableRefDeserializer;
 import com.fivetran.agent.mysql.source.TableRef;
 
 import java.util.Objects;
@@ -25,7 +23,8 @@ public class BeginTable {
         return Objects.hash(table);
     }
 
-    BeginTable(@JsonProperty("begin_table") @JsonDeserialize(using = TableRefDeserializer.class) TableRef beginTable) {
+    @JsonCreator
+    public BeginTable(@JsonProperty("begin_table") TableRef beginTable) {
         this.table = beginTable;
     }
 }
