@@ -4,10 +4,14 @@
 package com.fivetran.agent.mysql.source;
 
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class TableRef {
     public final String schema, name;
 
-    public TableRef(String schemaName, String tableName) {
+    @JsonCreator
+    public TableRef(@JsonProperty("schema") String schemaName, @JsonProperty("name") String tableName) {
         this.schema = schemaName;
         this.name = tableName;
     }
