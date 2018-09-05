@@ -137,7 +137,8 @@ public class BatchUpdaterTest {
         BatchUpdater initialImport = new BatchUpdater(config, api, out, logMessages::add, state);
         initialImport.update();
 
-        assertThat(outEvents.size(), equalTo(3));
+        assertThat(outEvents.size(), equalTo(4));
+        assertTrue(outEvents.contains(Event.createBeginTable(tableRef)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row1)));
         assertTrue(outEvents.contains(Event.createUpsert(tableRef, row2)));
         assertTrue(outEvents.contains(Event.createNop()));
