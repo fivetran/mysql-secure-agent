@@ -13,7 +13,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Optional;
 
-import static junit.framework.TestCase.assertTrue;
+import static junit.framework.TestCase.assertEquals;
 
 public class SerializeTest {
     @Test
@@ -98,6 +98,6 @@ public class SerializeTest {
 
         System.out.println(Serialize.value(state));
 
-        assertTrue(correctResult.equals(Serialize.value(state)));
+        assertEquals(correctResult, Serialize.value(state));
     }
 }
