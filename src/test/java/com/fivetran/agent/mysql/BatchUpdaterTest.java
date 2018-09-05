@@ -115,7 +115,8 @@ public class BatchUpdaterTest {
 
         new BatchUpdater(config, api, out, logMessages::add, state).update();
 
-        assertEquals(outEvents.size(), 3);
+        assertEquals(outEvents.size(), 4);
+        assertTrue(outEvents.contains(Event.createBeginTable(selectedTable)));
         assertTrue(outEvents.contains(Event.createUpsert(selectedTable, row1)));
         assertTrue(outEvents.contains(Event.createUpsert(selectedTable, row2)));
         assertTrue(outEvents.contains(Event.createNop()));
