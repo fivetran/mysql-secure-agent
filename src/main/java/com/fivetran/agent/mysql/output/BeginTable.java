@@ -7,7 +7,7 @@ import java.util.Objects;
 
 public class BeginTable {
     @JsonProperty("begin_table")
-    public final TableRef table;
+    public TableRef table;
 
     @Override
     public boolean equals(Object o) {
@@ -19,11 +19,13 @@ public class BeginTable {
 
     @Override
     public int hashCode() {
-
         return Objects.hash(table);
     }
 
-    public BeginTable(TableRef beginTable) {
+    // For Jackson
+    public BeginTable() {}
+
+    BeginTable(TableRef beginTable) {
         this.table = beginTable;
     }
 }
